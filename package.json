@@ -3,7 +3,7 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
-  "scripts": {
+  "script": {
   "dev": "vite dev",
   "build": "vite build",
   "postbuild": "node scripts/fix-wrangler.mjs",
