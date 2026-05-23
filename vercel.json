@@ -1,6 +1,5 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
@@ -14,13 +13,6 @@
           "value": "no-cache, no-store, must-revalidate"
         }
       ]
-    }
-  ],
-
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/"
     }
   ]
 }
