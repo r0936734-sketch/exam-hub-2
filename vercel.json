@@ -1,11 +1,10 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": ".output/public",
+  "outputDirectory": "dist",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "react",
-  
-  
+  "framework": "vite",
+
   "headers": [
     {
       "source": "/api/:path*",
@@ -17,6 +16,7 @@
       ]
     }
   ],
+
   "rewrites": [
     {
       "source": "/(.*)",
