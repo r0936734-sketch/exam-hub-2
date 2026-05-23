@@ -1,7 +1,4 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "up-lt-grade-cs",
-  "compatibility_date": "2025-05-23",
-  "compatibility_flags": ["nodejs_compat"],
   "pages_build_output_dir": "dist/client"
 }
