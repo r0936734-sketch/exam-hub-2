@@ -1,4 +1,9 @@
 {
+<<<<<<< Updated upstream
   "name": "up-lt-grade-cs",
   "pages_build_output_dir": "dist/client"
 }
+=======
+  "pages_build_output_dir": "dist/client"
+}
+>>>>>>> Stashed changes
