@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getLeaderboardServerFn } from "@/server/leaderboard.server";
+import { getLeaderboardServerFn } from "@/services/leaderboard.functions";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 

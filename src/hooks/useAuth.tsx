@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { getCurrentSessionServerFn, logoutServerFn } from "@/services/auth.functions";
 
 type Role = "student" | "admin";
 type User = { id: string; username: string; name: string };
@@ -16,6 +17,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ user: null, role: null, token: null });
 
   useEffect(() => {
+    let cancelled = false;
+
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem(KEY) : null;
       if (raw) {
@@ -25,6 +28,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       // Silently ignore parsing errors
     }
+
+    getCurrentSessionServerFn()
+      .then((session) => {
+        if (cancelled) return;
+
+        if (session.user && session.role) {
+          const next = { user: session.user, role: session.role, token: "session" };
+          setState(next);
+          localStorage.setItem(KEY, JSON.stringify(next));
+          return;
+        }
+
+        setState({ user: null, role: null, token: null });
+        localStorage.removeItem(KEY);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setState({ user: null, role: null, token: null });
+        localStorage.removeItem(KEY);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const signIn = (user: User, role: Role, token: string) => {
@@ -36,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = () => {
     setState({ user: null, role: null, token: null });
     localStorage.removeItem(KEY);
+    logoutServerFn().catch(() => {});
   };
 
   return (

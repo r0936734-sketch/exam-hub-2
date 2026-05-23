@@ -14,14 +14,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getAdminDashboard } from "@/services/api";
+import { getAdminDashboardServerFn } from "@/services/admin.functions";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_app/admin/dashboard")({ component: AdminDashboard });
 
 function AdminDashboard() {
+  const { token } = useAuth();
   const { data, isLoading } = useQuery({
-    queryKey: ["admin-dashboard"],
-    queryFn: getAdminDashboard,
+    queryKey: ["admin-dashboard", token],
+    queryFn: () => getAdminDashboardServerFn({ data: { token: token || "" } }),
+    enabled: Boolean(token),
   });
 
   return (
@@ -72,7 +75,8 @@ function AdminDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            {data?.topStudents.map((s) => (
+            {data?.topStudents.length ? (
+              data.topStudents.map((s) => (
               <div
                 key={s.userId}
                 className="flex items-center justify-between py-2.5 border-b last:border-0 border-border"
@@ -88,7 +92,10 @@ function AdminDashboard() {
                 </div>
                 <span className="font-mono text-sm font-semibold">{s.averageScore}</span>
               </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">No student scores yet.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -111,13 +118,21 @@ function AdminDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.pending.map((p) => (
+                {data?.pending.length ? (
+                  data.pending.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium text-sm">{p.studentName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{p.testTitle}</TableCell>
                     <TableCell className="text-right text-sm font-mono">{p.files}</TableCell>
                   </TableRow>
-                ))}
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                      No pending evaluations.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

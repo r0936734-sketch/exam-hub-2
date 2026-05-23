@@ -1,67 +1,203 @@
-import { Db } from "mongodb";
+import { Db, ObjectId } from "mongodb";
+import { deleteSubmissionsWithImages } from "@/server/cleanup";
 
-export async function generateNextUserId(db: Db, role: "student" | "admin"): Promise<string> {
-  const prefix = role === "admin" ? "ADM" : "STU";
+export async function generateNextUserId(db: Db): Promise<string> {
+  const prefix = "STU";
+  const users = await db
+    .collection<User>("users")
+    .find({ role: "student", userId: { $regex: `^${prefix}\\d+$` } })
+    .project<{ userId: string }>({ userId: 1, _id: 0 })
+    .toArray();
 
-  // Get the count of users with this role
-  const count = await db.collection("users").countDocuments({ role });
+  const highest = users.reduce((max, user) => {
+    const value = Number.parseInt(user.userId.slice(prefix.length), 10);
+    return Number.isFinite(value) ? Math.max(max, value) : max;
+  }, 0);
 
-  // Generate sequential ID with padding (e.g., STU001, STU002)
-  const newNumber = count + 1;
-  const userId = `${prefix}${String(newNumber).padStart(3, "0")}`;
-
-  return userId;
+  return `${prefix}${String(highest + 1).padStart(3, "0")}`;
 }
 
 export async function getNextSequentialId(db: Db): Promise<string> {
-  const result = await db
-    .collection("users")
-    .findOne({ role: "student" }, { sort: { createdAt: -1 } });
-
-  let nextNum = 1;
-  if (result?.userId?.startsWith("STU")) {
-    const currentNum = parseInt(result.userId.slice(3), 10);
-    nextNum = currentNum + 1;
-  }
-
-  return `STU${String(nextNum).padStart(3, "0")}`;
+  return generateNextUserId(db);
 }
 
 export interface User {
-  _id?: string;
+  _id?: ObjectId;
   userId: string;
   name: string;
   password: string;
-  role: "student" | "admin";
+  role: "student";
   avgMarks: number;
   totalTests: number;
+  active?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export async function createUser(
   db: Db,
-  data: { name: string; password: string; role: "student" | "admin" },
+  data: { name: string; password: string; role: "student" },
 ): Promise<User> {
-  const userId = await generateNextUserId(db, data.role);
+  const name = data.name.trim();
+  const password = data.password.trim();
+
+  if (!name || !password) {
+    throw new Error("name and password are required");
+  }
+
+  const userId = await generateNextUserId(db);
 
   const user: User = {
     userId,
-    name: data.name,
-    password: data.password, // Note: In production, hash this with bcrypt
+    name,
+    password, // Note: In production, hash this with bcrypt
     role: data.role,
     avgMarks: 0,
     totalTests: 0,
+    active: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
-  await db.collection("users").insertOne(user);
+  await db.collection<User>("users").insertOne(user);
   return user;
 }
 
 export async function findUserByUserId(db: Db, userId: string): Promise<User | null> {
-  return db.collection("users").findOne({ userId });
+  return db.collection<User>("users").findOne({
+    role: "student",
+    userId: userId.trim().toUpperCase(),
+  });
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export async function findStudentByUserIdOrName(db: Db, identifier: string): Promise<User | null> {
+  const value = identifier.trim();
+  if (!value) return null;
+
+  const userIdMatch = await db
+    .collection<User>("users")
+    .findOne({ role: "student", userId: value.toUpperCase() });
+
+  if (userIdMatch) return userIdMatch;
+
+  const nameMatches = await db
+    .collection<User>("users")
+    .find({
+      role: "student",
+      name: { $regex: `^${escapeRegex(value)}$`, $options: "i" },
+    })
+    .limit(2)
+    .toArray();
+
+  if (nameMatches.length > 1) {
+    throw new Error("Multiple students share this name. Use the student ID instead.");
+  }
+
+  return nameMatches[0] ?? null;
+}
+
+export async function getStudentProfileByUserId(
+  db: Db,
+  userId: string,
+): Promise<{
+  userId: string;
+  name: string;
+  avgMarks: number;
+  rank: number | null;
+  totalStudents: number;
+} | null> {
+  const normalizedUserId = userId.trim().toUpperCase();
+  const student = await db
+    .collection<User>("users")
+    .findOne({ role: "student", userId: normalizedUserId });
+
+  if (!student || student.active === false) return null;
+
+  const students = await db
+    .collection<User>("users")
+    .find({ role: "student", active: { $ne: false } })
+    .sort({ avgMarks: -1, totalTests: -1, userId: 1 })
+    .project<{ userId: string }>({ userId: 1, _id: 0 })
+    .toArray();
+
+  const rankIndex = students.findIndex((row) => row.userId === normalizedUserId);
+
+  return {
+    userId: student.userId,
+    name: student.name,
+    avgMarks: student.avgMarks,
+    rank: rankIndex >= 0 ? rankIndex + 1 : null,
+    totalStudents: students.length,
+  };
+}
+
+export async function getAllStudents(db: Db): Promise<
+  Array<{
+    id: string;
+    userId: string;
+    name: string;
+    password: string;
+    active: boolean;
+    createdAt: string;
+  }>
+> {
+  return db
+    .collection<User>("users")
+    .find({ role: "student" })
+    .sort({ createdAt: -1 })
+    .toArray()
+    .then((users) =>
+      users.map((user) => ({
+        id: user.userId,
+        userId: user.userId,
+        name: user.name,
+        password: user.password,
+        active: user.active !== false,
+        createdAt: user.createdAt.toISOString(),
+      })),
+    );
+}
+
+export async function updateStudentActive(
+  db: Db,
+  userId: string,
+  active: boolean,
+): Promise<boolean> {
+  const result = await db.collection<User>("users").updateOne(
+    { userId, role: "student" },
+    {
+      $set: {
+        active,
+        updatedAt: new Date(),
+      },
+    },
+  );
+
+  return result.matchedCount > 0;
+}
+
+export async function deleteStudent(db: Db, userId: string): Promise<boolean> {
+  const normalizedUserId = userId.trim().toUpperCase();
+  const student = await db.collection<User>("users").findOne({
+    userId: normalizedUserId,
+    role: "student",
+  });
+
+  if (!student) return false;
+
+  // Remove stored answer images before deleting the student's submission records.
+  await deleteSubmissionsWithImages(db, { studentId: normalizedUserId });
+
+  const result = await db.collection<User>("users").deleteOne({
+    userId: normalizedUserId,
+    role: "student",
+  });
+
+  return result.deletedCount > 0;
 }
 
 export async function getLeaderboard(
@@ -78,8 +214,8 @@ export async function getLeaderboard(
 > {
   return db
     .collection("users")
-    .find({ role: "student" })
-    .sort({ avgMarks: -1 })
+    .find({ role: "student", active: { $ne: false } })
+    .sort({ avgMarks: -1, totalTests: -1, userId: 1 })
     .limit(limit)
     .toArray()
     .then((users) =>

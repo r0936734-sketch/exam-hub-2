@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, FileImage, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileImage, Loader2, MessageSquareText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,15 +10,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getPendingSubmissions, evaluateSubmission } from "@/services/api";
+import {
+  evaluateSubmissionServerFn,
+  getPendingSubmissionsServerFn,
+} from "@/services/admin.functions";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/admin/submissions")({ component: AdminSubmissions });
 
 function AdminSubmissions() {
+  const { token } = useAuth();
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["pending-submissions"],
-    queryFn: getPendingSubmissions,
+    queryKey: ["pending-submissions", token],
+    queryFn: async () => {
+      const result = await getPendingSubmissionsServerFn({ data: { token: token || "" } });
+      return result.submissions;
+    },
+    enabled: Boolean(token),
   });
   const [idx, setIdx] = useState(0);
   const [marks, setMarks] = useState("");
@@ -36,9 +45,20 @@ function AdminSubmissions() {
       toast.error("Enter marks first.");
       return;
     }
+    if (Number(marks) > current.maxMarks) {
+      toast.error(`Marks cannot be more than ${current.maxMarks}.`);
+      return;
+    }
     setSubmitting(true);
     try {
-      await evaluateSubmission(current.id, Number(marks), feedback);
+      await evaluateSubmissionServerFn({
+        data: {
+          token: token || "",
+          submissionId: current.id,
+          marks: Number(marks),
+          feedback,
+        },
+      });
       toast.success("Evaluation submitted");
       setMarks("");
       setFeedback("");
@@ -104,21 +124,57 @@ function AdminSubmissions() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">Written answers</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {current.answers?.some((answer: any) => answer.text?.trim()) ? (
+                current.answers.map((answer: any) => (
+                  <div key={answer.questionId} className="rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {answer.questionId}
+                      </Badge>
+                      <p className="text-sm font-medium">{answer.questionTitle}</p>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                      {answer.text?.trim() || "No text answer."}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border bg-muted/50 p-4 text-muted-foreground">
+                  <MessageSquareText className="size-5" />
+                  <p className="mt-2 text-sm">No written answers submitted.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base">Uploaded answers ({current.files} files)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3">
-                {Array.from({ length: current.files }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="aspect-[3/4] rounded-lg border bg-muted/50 grid place-items-center text-muted-foreground"
-                  >
-                    <div className="text-center">
-                      <FileImage className="size-8 mx-auto" />
-                      <p className="text-xs mt-2">answer_{i + 1}.jpg</p>
-                    </div>
+                {current.imageUrls.map((url: string, i: number) => (
+                  <div key={url} className="rounded-lg border bg-muted/50 overflow-hidden">
+                    <a href={url} target="_blank" rel="noreferrer">
+                      <img
+                        src={url}
+                        alt={`Answer ${i + 1}`}
+                        className="aspect-[3/4] w-full object-contain bg-muted"
+                      />
+                    </a>
                   </div>
                 ))}
+                {current.imageUrls.length === 0 && (
+                  <div className="col-span-2 aspect-[3/4] rounded-lg border bg-muted/50 grid place-items-center text-muted-foreground">
+                    <div className="text-center">
+                      <FileImage className="size-8 mx-auto" />
+                      <p className="text-xs mt-2">No images attached</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -136,10 +192,12 @@ function AdminSubmissions() {
                   id="marks"
                   type="number"
                   placeholder="0"
+                  max={current.maxMarks}
+                  min={0}
                   value={marks}
                   onChange={(e) => setMarks(e.target.value)}
                 />
-                <span className="text-sm text-muted-foreground">/ 100</span>
+                <span className="text-sm text-muted-foreground">/ {current.maxMarks}</span>
               </div>
             </div>
             <div>

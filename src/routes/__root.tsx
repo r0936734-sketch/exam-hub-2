@@ -64,11 +64,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ExamPro � Exam Preparation & Evaluation Platform" },
+      { title: "LT Grade Prep" },
       {
         name: "description",
         content:
-          "Modern exam preparation, submission and evaluation platform for students and educators.",
+          "UP LT Grade Mains Preparation for Computer with practice, submissions and evaluation.",
       },
     ],
     links: [{ rel: "stylesheet", href: appCss }],

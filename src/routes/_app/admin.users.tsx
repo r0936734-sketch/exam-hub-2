@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Plus, Search, Loader2, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,22 +26,32 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createStudentServerFn } from "@/server/admin.server";
+import {
+  createStudentServerFn,
+  deleteStudentServerFn,
+  getAllStudentsServerFn,
+  toggleStudentActiveServerFn,
+} from "@/services/admin.functions";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/admin/users")({ component: AdminUsers });
 
 function AdminUsers() {
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["all-students"],
-    queryFn: getAllStudents,
-  });
   const { token } = useAuth();
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["all-students", token],
+    queryFn: async () => {
+      const result = await getAllStudentsServerFn({ data: { token: token || "" } });
+      return result.students;
+    },
+    enabled: Boolean(token),
+  });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", password: "" });
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -58,7 +68,9 @@ function AdminUsers() {
     }
     setSaving(true);
     try {
-      await createStudentServerFn({ token: token || "", name: form.name, password: form.password });
+      await createStudentServerFn({
+        data: { token: token || "", name: form.name, password: form.password },
+      });
       toast.success("Student account created");
       setOpen(false);
       setForm({ name: "", password: "" });
@@ -71,9 +83,31 @@ function AdminUsers() {
   };
 
   const toggle = async (id: string, active: boolean) => {
-    await toggleStudentActive(id, active);
-    toast.success(active ? "Student activated" : "Student deactivated");
-    refetch();
+    try {
+      await toggleStudentActiveServerFn({
+        data: { token: token || "", userId: id, active },
+      });
+      toast.success(active ? "Student activated" : "Student deactivated");
+      refetch();
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to update student");
+    }
+  };
+
+  const remove = async (userId: string) => {
+    const confirmed = window.confirm(`Delete student ${userId}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeleting(userId);
+    try {
+      await deleteStudentServerFn({ data: { token: token || "", userId } });
+      toast.success("Student deleted");
+      refetch();
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to delete student");
+    } finally {
+      setDeleting(null);
+    }
   };
 
   return (
@@ -153,8 +187,9 @@ function AdminUsers() {
                   <TableRow>
                     <TableHead>Student</TableHead>
                     <TableHead className="hidden md:table-cell">User ID</TableHead>
+                    <TableHead className="hidden lg:table-cell">Password</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Active</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -165,17 +200,43 @@ function AdminUsers() {
                           <div className="size-8 rounded-full bg-primary/10 text-primary grid place-items-center text-xs font-semibold">
                             {s.name.slice(0, 2).toUpperCase()}
                           </div>
-                          <span className="font-medium">{s.name}</span>
+                          <div>
+                            <span className="font-medium">{s.name}</span>
+                            <p className="lg:hidden text-xs text-muted-foreground">
+                              Password: <span className="font-mono">{s.password}</span>
+                            </p>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
                         {s.userId}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="default">Active</Badge>
+                      <TableCell className="hidden lg:table-cell font-mono text-xs">
+                        {s.password}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Switch checked={s.active} onCheckedChange={(c) => toggle(s.id, c)} />
+                      <TableCell>
+                        <Badge variant={s.active ? "default" : "secondary"}>
+                          {s.active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Switch checked={s.active} onCheckedChange={(c) => toggle(s.id, c)} />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(s.userId)}
+                            disabled={deleting === s.userId}
+                            aria-label={`Delete ${s.name}`}
+                          >
+                            {deleting === s.userId ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

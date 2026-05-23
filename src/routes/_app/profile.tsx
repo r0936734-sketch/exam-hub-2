@@ -1,152 +1,96 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
-import { Mail, Calendar, Trophy } from "lucide-react";
+import { BarChart3, Trophy, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { getStudentProfile } from "@/services/api";
+import { getStudentProfileServerFn } from "@/services/profile.functions";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 
 function ProfilePage() {
-  const { data, isLoading } = useQuery({ queryKey: ["profile"], queryFn: getStudentProfile });
+  const { token } = useAuth();
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["student-profile", token],
+    queryFn: async () => {
+      const result = await getStudentProfileServerFn({ data: { token: token || "" } });
+      return result.profile;
+    },
+    enabled: Boolean(token),
+  });
 
-  if (isLoading || !data) return <Skeleton className="h-96" />;
-  const { student, stats, performance, submissions } = data;
+  if (isLoading) return <Skeleton className="h-56" />;
+
+  if (isError || !data) {
+    return (
+      <div>
+        <PageHeader title="My profile" description="Student details from your account." />
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Unable to load profile details.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const initials = data.name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div>
-      <PageHeader title="My profile" description="Personal details and academic performance." />
+      <PageHeader title="My profile" description="Student details from your account." />
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardContent className="p-6 text-center">
-            <div className="size-20 rounded-full bg-primary text-primary-foreground grid place-items-center mx-auto text-2xl font-semibold">
-              {student.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </div>
-            <h2 className="mt-4 text-xl font-semibold">{student.name}</h2>
-            <p className="text-sm text-muted-foreground">@{student.username}</p>
-            <Badge variant="outline" className="mt-3">
-              {student.classGroup}
-            </Badge>
-            <div className="mt-6 space-y-3 text-sm text-left">
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <Mail className="size-4" /> {student.email}
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="size-11 rounded-md bg-primary text-primary-foreground grid place-items-center text-sm font-semibold">
+                {initials}
               </div>
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <Calendar className="size-4" /> Joined{" "}
-                {new Date(student.joinedAt).toLocaleDateString()}
-              </div>
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <Trophy className="size-4" /> Rank #{stats.currentRank} of {stats.totalStudents}
+              <div className="min-w-0">
+                <p className="font-medium truncate">{data.name}</p>
+                <p className="text-xs text-muted-foreground font-mono">{data.userId}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Performance trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Average</p>
-                <p className="text-2xl font-semibold">{stats.averageMarks}%</p>
+                <p className="text-xs text-muted-foreground">Average marks</p>
+                <p className="mt-1 text-2xl font-semibold">{data.avgMarks.toFixed(1)}%</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Tests</p>
-                <p className="text-2xl font-semibold">{stats.totalTests}</p>
-              </div>
+              <BarChart3 className="size-5 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Rank</p>
-                <p className="text-2xl font-semibold">#{stats.currentRank}</p>
+                <p className="mt-1 text-2xl font-semibold">
+                  {data.rank ? `#${data.rank}` : "Unranked"}
+                </p>
               </div>
-            </div>
-            <div className="h-56">
-              <ResponsiveContainer>
-                <LineChart data={performance}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={12} />
-                  <YAxis stroke="var(--muted-foreground)" fontSize={12} domain={[60, 100]} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--popover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    stroke="var(--primary)"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: "var(--primary)" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {data.rank ? (
+                <Trophy className="size-5 text-muted-foreground" />
+              ) : (
+                <UserRound className="size-5 text-muted-foreground" />
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Submission history</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Test</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Score</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {submissions.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.testTitle}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(s.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={s.status === "evaluated" ? "default" : "secondary"}>
-                      {s.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {s.score != null ? `${s.score}/${s.total}` : "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 }

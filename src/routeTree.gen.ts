@@ -14,14 +14,18 @@ import { Route as AdminLoginRouteImport } from './routes/admin-login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppTestsRouteImport } from './routes/_app/tests'
+import { Route as AppSyllabusRouteImport } from './routes/_app/syllabus'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppNoticesRouteImport } from './routes/_app/notices'
 import { Route as AppLeaderboardRouteImport } from './routes/_app/leaderboard'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppTestsTestIdRouteImport } from './routes/_app/tests.$testId'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
 import { Route as AppAdminTestsRouteImport } from './routes/_app/admin.tests'
 import { Route as AppAdminSubmissionsRouteImport } from './routes/_app/admin.submissions'
+import { Route as AppAdminNoticesRouteImport } from './routes/_app/admin.notices'
 import { Route as AppAdminDashboardRouteImport } from './routes/_app/admin.dashboard'
+import { Route as AppAdminTestsTestIdRouteImport } from './routes/_app/admin/tests.$testId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -47,9 +51,19 @@ const AppTestsRoute = AppTestsRouteImport.update({
   path: '/tests',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSyllabusRoute = AppSyllabusRouteImport.update({
+  id: '/syllabus',
+  path: '/syllabus',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNoticesRoute = AppNoticesRouteImport.update({
+  id: '/notices',
+  path: '/notices',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLeaderboardRoute = AppLeaderboardRouteImport.update({
@@ -82,10 +96,20 @@ const AppAdminSubmissionsRoute = AppAdminSubmissionsRouteImport.update({
   path: '/admin/submissions',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminNoticesRoute = AppAdminNoticesRouteImport.update({
+  id: '/admin/notices',
+  path: '/admin/notices',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminDashboardRoute = AppAdminDashboardRouteImport.update({
   id: '/admin/dashboard',
   path: '/admin/dashboard',
   getParentRoute: () => AppRoute,
+} as any)
+const AppAdminTestsTestIdRoute = AppAdminTestsTestIdRouteImport.update({
+  id: '/$testId',
+  path: '/$testId',
+  getParentRoute: () => AppAdminTestsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -94,13 +118,17 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard': typeof AppDashboardRoute
   '/leaderboard': typeof AppLeaderboardRoute
+  '/notices': typeof AppNoticesRoute
   '/profile': typeof AppProfileRoute
+  '/syllabus': typeof AppSyllabusRoute
   '/tests': typeof AppTestsRouteWithChildren
   '/admin/dashboard': typeof AppAdminDashboardRoute
+  '/admin/notices': typeof AppAdminNoticesRoute
   '/admin/submissions': typeof AppAdminSubmissionsRoute
-  '/admin/tests': typeof AppAdminTestsRoute
+  '/admin/tests': typeof AppAdminTestsRouteWithChildren
   '/admin/users': typeof AppAdminUsersRoute
   '/tests/$testId': typeof AppTestsTestIdRoute
+  '/admin/tests/$testId': typeof AppAdminTestsTestIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,13 +136,17 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/dashboard': typeof AppDashboardRoute
   '/leaderboard': typeof AppLeaderboardRoute
+  '/notices': typeof AppNoticesRoute
   '/profile': typeof AppProfileRoute
+  '/syllabus': typeof AppSyllabusRoute
   '/tests': typeof AppTestsRouteWithChildren
   '/admin/dashboard': typeof AppAdminDashboardRoute
+  '/admin/notices': typeof AppAdminNoticesRoute
   '/admin/submissions': typeof AppAdminSubmissionsRoute
-  '/admin/tests': typeof AppAdminTestsRoute
+  '/admin/tests': typeof AppAdminTestsRouteWithChildren
   '/admin/users': typeof AppAdminUsersRoute
   '/tests/$testId': typeof AppTestsTestIdRoute
+  '/admin/tests/$testId': typeof AppAdminTestsTestIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,13 +156,17 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/leaderboard': typeof AppLeaderboardRoute
+  '/_app/notices': typeof AppNoticesRoute
   '/_app/profile': typeof AppProfileRoute
+  '/_app/syllabus': typeof AppSyllabusRoute
   '/_app/tests': typeof AppTestsRouteWithChildren
   '/_app/admin/dashboard': typeof AppAdminDashboardRoute
+  '/_app/admin/notices': typeof AppAdminNoticesRoute
   '/_app/admin/submissions': typeof AppAdminSubmissionsRoute
-  '/_app/admin/tests': typeof AppAdminTestsRoute
+  '/_app/admin/tests': typeof AppAdminTestsRouteWithChildren
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/tests/$testId': typeof AppTestsTestIdRoute
+  '/_app/admin/tests/$testId': typeof AppAdminTestsTestIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,13 +176,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard'
     | '/leaderboard'
+    | '/notices'
     | '/profile'
+    | '/syllabus'
     | '/tests'
     | '/admin/dashboard'
+    | '/admin/notices'
     | '/admin/submissions'
     | '/admin/tests'
     | '/admin/users'
     | '/tests/$testId'
+    | '/admin/tests/$testId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -154,13 +194,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard'
     | '/leaderboard'
+    | '/notices'
     | '/profile'
+    | '/syllabus'
     | '/tests'
     | '/admin/dashboard'
+    | '/admin/notices'
     | '/admin/submissions'
     | '/admin/tests'
     | '/admin/users'
     | '/tests/$testId'
+    | '/admin/tests/$testId'
   id:
     | '__root__'
     | '/'
@@ -169,13 +213,17 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/dashboard'
     | '/_app/leaderboard'
+    | '/_app/notices'
     | '/_app/profile'
+    | '/_app/syllabus'
     | '/_app/tests'
     | '/_app/admin/dashboard'
+    | '/_app/admin/notices'
     | '/_app/admin/submissions'
     | '/_app/admin/tests'
     | '/_app/admin/users'
     | '/_app/tests/$testId'
+    | '/_app/admin/tests/$testId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -222,11 +270,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTestsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/syllabus': {
+      id: '/_app/syllabus'
+      path: '/syllabus'
+      fullPath: '/syllabus'
+      preLoaderRoute: typeof AppSyllabusRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/profile': {
       id: '/_app/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notices': {
+      id: '/_app/notices'
+      path: '/notices'
+      fullPath: '/notices'
+      preLoaderRoute: typeof AppNoticesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/leaderboard': {
@@ -271,12 +333,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminSubmissionsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/notices': {
+      id: '/_app/admin/notices'
+      path: '/admin/notices'
+      fullPath: '/admin/notices'
+      preLoaderRoute: typeof AppAdminNoticesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/admin/dashboard': {
       id: '/_app/admin/dashboard'
       path: '/admin/dashboard'
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AppAdminDashboardRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/admin/tests/$testId': {
+      id: '/_app/admin/tests/$testId'
+      path: '/$testId'
+      fullPath: '/admin/tests/$testId'
+      preLoaderRoute: typeof AppAdminTestsTestIdRouteImport
+      parentRoute: typeof AppAdminTestsRoute
     }
   }
 }
@@ -293,25 +369,43 @@ const AppTestsRouteWithChildren = AppTestsRoute._addFileChildren(
   AppTestsRouteChildren,
 )
 
+interface AppAdminTestsRouteChildren {
+  AppAdminTestsTestIdRoute: typeof AppAdminTestsTestIdRoute
+}
+
+const AppAdminTestsRouteChildren: AppAdminTestsRouteChildren = {
+  AppAdminTestsTestIdRoute: AppAdminTestsTestIdRoute,
+}
+
+const AppAdminTestsRouteWithChildren = AppAdminTestsRoute._addFileChildren(
+  AppAdminTestsRouteChildren,
+)
+
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppLeaderboardRoute: typeof AppLeaderboardRoute
+  AppNoticesRoute: typeof AppNoticesRoute
   AppProfileRoute: typeof AppProfileRoute
+  AppSyllabusRoute: typeof AppSyllabusRoute
   AppTestsRoute: typeof AppTestsRouteWithChildren
   AppAdminDashboardRoute: typeof AppAdminDashboardRoute
+  AppAdminNoticesRoute: typeof AppAdminNoticesRoute
   AppAdminSubmissionsRoute: typeof AppAdminSubmissionsRoute
-  AppAdminTestsRoute: typeof AppAdminTestsRoute
+  AppAdminTestsRoute: typeof AppAdminTestsRouteWithChildren
   AppAdminUsersRoute: typeof AppAdminUsersRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppLeaderboardRoute: AppLeaderboardRoute,
+  AppNoticesRoute: AppNoticesRoute,
   AppProfileRoute: AppProfileRoute,
+  AppSyllabusRoute: AppSyllabusRoute,
   AppTestsRoute: AppTestsRouteWithChildren,
   AppAdminDashboardRoute: AppAdminDashboardRoute,
+  AppAdminNoticesRoute: AppAdminNoticesRoute,
   AppAdminSubmissionsRoute: AppAdminSubmissionsRoute,
-  AppAdminTestsRoute: AppAdminTestsRoute,
+  AppAdminTestsRoute: AppAdminTestsRouteWithChildren,
   AppAdminUsersRoute: AppAdminUsersRoute,
 }
 

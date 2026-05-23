@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { loginServerFn } from "@/server/auth.server";
+import { loginAdminServerFn } from "@/services/auth.functions";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -27,12 +27,14 @@ function AdminLogin() {
   const onSubmit = async (data: Form) => {
     setLoading(true);
     try {
-      const res = await loginServerFn(data);
+      const res = await loginAdminServerFn({
+        data: { userId: data.userId.trim().toUpperCase(), password: data.password.trim() },
+      });
       signIn(res.user, res.user.role, res.token);
       toast.success("Welcome, administrator");
       navigate({ to: "/admin/dashboard" });
-    } catch {
-      toast.error("Invalid admin credentials");
+    } catch (error) {
+      toast.error((error as Error).message || "Invalid admin credentials");
     } finally {
       setLoading(false);
     }
@@ -51,9 +53,9 @@ function AdminLogin() {
           <div className="size-11 rounded-lg bg-accent text-accent-foreground grid place-items-center mb-4">
             <ShieldCheck className="size-5" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Administrator access</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">LT Grade Prep admin access</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Restricted area for faculty and platform admins.
+            Restricted area for UP LT Grade Computer faculty and admins.
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
@@ -61,7 +63,8 @@ function AdminLogin() {
               <Label htmlFor="aid">Admin ID</Label>
               <Input
                 id="aid"
-                placeholder="ADM001"
+                autoComplete="username"
+                placeholder="Admin1010"
                 {...register("userId", { required: "Required" })}
               />
               {errors.userId && (
@@ -73,7 +76,7 @@ function AdminLogin() {
               <Input
                 id="apw"
                 type="password"
-                placeholder="••••••••"
+                placeholder="abc123"
                 {...register("password", { required: "Required" })}
               />
               {errors.password && (
