@@ -17,12 +17,15 @@ export async function findAdminByUserId(db: Db, userId: string): Promise<AdminUs
   });
 }
 
-export async function getAllActiveAdmins(db: Db): Promise<AdminUser[]> {
-  return db.collection<AdminUser>("admins")
+export async function getAllActiveAdmins(
+  db: Db,
+): Promise<Array<Pick<AdminUser, "userId" | "name">>> {
+  return db
+    .collection<AdminUser>("admins")
     .find({ active: { $ne: false } })
     .project({ userId: 1, name: 1 })
     .sort({ name: 1 })
-    .toArray();
+    .toArray() as Promise<Array<Pick<AdminUser, "userId" | "name">>>;
 }
 
 export async function upsertAdmin(

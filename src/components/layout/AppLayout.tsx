@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   FileText,
   Trophy,
-  User,
   LogOut,
   Moon,
   Sun,
@@ -14,6 +13,7 @@ import {
   Menu,
   X,
   GraduationCap,
+  Upload,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -22,17 +22,22 @@ import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { getStudentNoticesServerFn, getAdminsListServerFn } from "@/services/student.functions";
+import {
+  getStudentNoticesServerFn,
+  getAdminsListServerFn,
+  getRecentSubmissionsByTestServerFn,
+  getAdminSubmissionsViewServerFn,
+} from "@/services/student.functions";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
 const studentNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tests", label: "Tests", icon: FileText },
+  { to: "/submissions", label: "Submissions", icon: Upload },
   { to: "/syllabus", label: "Syllabus", icon: BookOpen },
   { to: "/notices", label: "Notices", icon: Megaphone },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
-  { to: "/profile", label: "Profile", icon: User },
 ];
 
 const adminNav: NavItem[] = [
@@ -70,6 +75,20 @@ export function AppLayout() {
     queryKey: ["layout-admins", token],
     queryFn: async () => getAdminsListServerFn({ data: { token: token || "" } }),
     enabled: Boolean(token && role === "student"),
+  });
+
+  const { data: studentSubmissionsData } = useQuery({
+    queryKey: ["layout-student-submissions", token],
+    queryFn: async () =>
+      getRecentSubmissionsByTestServerFn({ data: { token: token || "" } }),
+    enabled: Boolean(token && role === "student"),
+  });
+
+  const { data: adminSubmissionsData } = useQuery({
+    queryKey: ["layout-admin-submissions", token],
+    queryFn: async () =>
+      getAdminSubmissionsViewServerFn({ data: { token: token || "" } }),
+    enabled: Boolean(token && role === "admin"),
   });
 
   const latestNotice = useMemo(() => noticeData?.notices?.[0] || null, [noticeData]);
@@ -136,7 +155,112 @@ export function AppLayout() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-sidebar-border space-y-3">
+        <div className="flex-1 overflow-y-auto p-3 border-t border-sidebar-border space-y-3">
+          {/* Submissions Gallery section for students */}
+          {role === "student" && studentSubmissionsData?.tests && studentSubmissionsData.tests.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
+                <Upload className="size-3" /> Submissions Gallery
+              </p>
+              <div className="space-y-3">
+                {studentSubmissionsData.tests.map((test) => (
+                  <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
+                    <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
+                    <div className="space-y-2">
+                      {test.submissions.map((sub) => (
+                        <div key={sub.id} className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground font-medium">
+                            {sub.studentName}
+                            {sub.marks !== null && ` - ${sub.marks} marks`}
+                          </p>
+                          {sub.images.length > 0 ? (
+                            <div className="flex gap-1 flex-wrap">
+                              {sub.images.slice(0, 2).map((img, idx) => (
+                                <a
+                                  key={idx}
+                                  href={img}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-12 h-12 rounded border border-sidebar-accent/50 overflow-hidden hover:border-primary transition-colors flex items-center justify-center bg-sidebar-accent/50"
+                                >
+                                  <img
+                                    src={img}
+                                    alt={`${sub.studentName} submission`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </a>
+                              ))}
+                              {sub.images.length > 2 && (
+                                <div className="w-12 h-12 rounded border border-sidebar-accent/50 flex items-center justify-center bg-sidebar-accent/50">
+                                  <p className="text-[8px] font-medium">+{sub.images.length - 2}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground italic">No images</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Submissions Gallery section for admins */}
+          {role === "admin" && adminSubmissionsData?.tests && adminSubmissionsData.tests.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
+                <Upload className="size-3" /> Submissions Gallery
+              </p>
+              <div className="space-y-3">
+                {adminSubmissionsData.tests.map((test) => (
+                  <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
+                    <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
+                    <div className="space-y-2">
+                      {test.submissions.map((sub) => (
+                        <div key={sub.id} className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground font-medium">
+                            {sub.studentName}
+                            {sub.marks !== null && ` - ${sub.marks} marks`}
+                          </p>
+                          {sub.images.length > 0 ? (
+                            <div className="flex gap-1 flex-wrap">
+                              {sub.images.slice(0, 2).map((img, idx) => (
+                                <a
+                                  key={idx}
+                                  href={img}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-12 h-12 rounded border border-sidebar-accent/50 overflow-hidden hover:border-primary transition-colors flex items-center justify-center bg-sidebar-accent/50"
+                                >
+                                  <img
+                                    src={img}
+                                    alt={`${sub.studentName} submission`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </a>
+                              ))}
+                              {sub.images.length > 2 && (
+                                <div className="w-12 h-12 rounded border border-sidebar-accent/50 flex items-center justify-center bg-sidebar-accent/50">
+                                  <p className="text-[8px] font-medium">+{sub.images.length - 2}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground italic">No images</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
           {/* Admins section for students */}
           {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
             <div className="space-y-2">
@@ -215,6 +339,99 @@ export function AppLayout() {
                 </Link>
               ))}
             </nav>
+            {/* Mobile Submissions Gallery for students */}
+            {role === "student" && studentSubmissionsData?.tests && studentSubmissionsData.tests.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-sidebar-border space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
+                  <Upload className="size-3" /> Submissions Gallery
+                </p>
+                <div className="space-y-3">
+                  {studentSubmissionsData.tests.map((test) => (
+                    <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
+                      <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
+                      <div className="space-y-2">
+                        {test.submissions.slice(0, 3).map((sub) => (
+                          <div key={sub.id} className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground font-medium">
+                              {sub.studentName}
+                              {sub.marks !== null && ` - ${sub.marks} marks`}
+                            </p>
+                            {sub.images.length > 0 ? (
+                              <div className="flex gap-1">
+                                {sub.images.slice(0, 2).map((img, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={img}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-10 h-10 rounded border border-sidebar-accent/50 overflow-hidden flex items-center justify-center bg-sidebar-accent/50"
+                                  >
+                                    <img
+                                      src={img}
+                                      alt={`${sub.studentName} submission`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground italic">No images</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mobile Submissions Gallery for admins */}
+            {role === "admin" && adminSubmissionsData?.tests && adminSubmissionsData.tests.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-sidebar-border space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
+                  <Upload className="size-3" /> Submissions Gallery
+                </p>
+                <div className="space-y-3">
+                  {adminSubmissionsData.tests.map((test) => (
+                    <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
+                      <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
+                      <div className="space-y-2">
+                        {test.submissions.slice(0, 3).map((sub) => (
+                          <div key={sub.id} className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground font-medium">
+                              {sub.studentName}
+                              {sub.marks !== null && ` - ${sub.marks} marks`}
+                            </p>
+                            {sub.images.length > 0 ? (
+                              <div className="flex gap-1">
+                                {sub.images.slice(0, 2).map((img, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={img}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-10 h-10 rounded border border-sidebar-accent/50 overflow-hidden flex items-center justify-center bg-sidebar-accent/50"
+                                  >
+                                    <img
+                                      src={img}
+                                      alt={`${sub.studentName} submission`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground italic">No images</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Admins section for students in mobile */}
             {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
               <div className="mt-6 pt-4 border-t border-sidebar-border space-y-2">

@@ -7,8 +7,8 @@ const SEVEN_DAYS = 60 * 60 * 24 * 7; // Extended to 7 days for better persistenc
 
 // Cookie options that work on both localhost (HTTP) and production (HTTPS)
 function getCookieOptions() {
-  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL;
-  
+  const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+
   return {
     httpOnly: false, // Allow JS access as fallback for browsers that block cookies
     sameSite: isProduction ? ("none" as const) : ("lax" as const), // "none" for production, "lax" for localhost
@@ -77,7 +77,7 @@ export async function requireSession(
   role: "student" | "admin",
   fallbackToken?: string,
 ) {
-  const session = await getSessionFromToken(db, readAuthToken(fallbackToken),);
+  const session = await getSessionFromToken(db, readAuthToken(fallbackToken));
 
   if (!session || session.role !== role) {
     throw new Error(role === "admin" ? "Forbidden - Admin only" : "Forbidden - Student only");
