@@ -6,6 +6,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
@@ -95,6 +96,27 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    // Ensure cookies are sent with all fetch requests (critical for production)
+    if (typeof window !== "undefined") {
+      const originalFetch = window.fetch;
+      if (!(window.fetch as any).__wrapped) {
+        window.fetch = function (...args: any[]) {
+          const [resource, config = {}] = args;
+
+          // Ensure credentials are always sent
+          if (typeof resource === "string") {
+            config.credentials = "include";
+          }
+
+          return originalFetch.apply(window, [resource, config]);
+        } as any;
+        (window.fetch as any).__wrapped = true;
+      }
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

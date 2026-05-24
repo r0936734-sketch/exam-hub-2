@@ -112,7 +112,7 @@ export const getCurrentSessionServerFn = createServerFn({ method: "POST" }).hand
   return {
     user: session.user,
     role: session.role,
-    token: "session",
+    token: token, // Return the actual token for localStorage backup
   };
 });
 
