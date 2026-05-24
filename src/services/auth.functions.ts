@@ -105,6 +105,10 @@ export const getCurrentSessionServerFn = createServerFn({ method: "POST" }).hand
     return { user: null, role: null, token: null };
   }
 
+  // Refresh the session cookie to extend expiration
+  const token = generateToken(session.user.id, session.user.name, session.role);
+  setAuthCookie(token);
+
   return {
     user: session.user,
     role: session.role,

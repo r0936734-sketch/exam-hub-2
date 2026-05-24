@@ -22,7 +22,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { getStudentNoticesServerFn } from "@/services/student.functions";
+import { getStudentNoticesServerFn, getAdminsListServerFn } from "@/services/student.functions";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
@@ -63,6 +63,12 @@ export function AppLayout() {
   const { data: noticeData } = useQuery({
     queryKey: ["layout-student-notices", token],
     queryFn: async () => getStudentNoticesServerFn({ data: { token: token || "" } }),
+    enabled: Boolean(token && role === "student"),
+  });
+
+  const { data: adminsData } = useQuery({
+    queryKey: ["layout-admins", token],
+    queryFn: async () => getAdminsListServerFn({ data: { token: token || "" } }),
     enabled: Boolean(token && role === "student"),
   });
 
@@ -130,7 +136,21 @@ export function AppLayout() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-sidebar-border space-y-2">
+        <div className="p-3 border-t border-sidebar-border space-y-3">
+          {/* Admins section for students */}
+          {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide">Admins</p>
+              <div className="space-y-1">
+                {adminsData.admins.map((admin) => (
+                  <div key={admin.id} className="rounded-md bg-sidebar-accent/40 px-3 py-2">
+                    <p className="text-xs font-medium text-sidebar-foreground">{admin.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* User info section */}
           {user && (
             <div className="mb-2 flex items-center gap-3 rounded-lg border bg-card/60 px-3 py-2.5">
               <div className="size-9 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold shrink-0">
@@ -195,6 +215,19 @@ export function AppLayout() {
                 </Link>
               ))}
             </nav>
+            {/* Admins section for students in mobile */}
+            {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-sidebar-border space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide">Admins</p>
+                <div className="space-y-1">
+                  {adminsData.admins.map((admin) => (
+                    <div key={admin.id} className="rounded-md bg-sidebar-accent/40 px-3 py-2">
+                      <p className="text-xs font-medium text-sidebar-foreground">{admin.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-6 pt-4 border-t border-sidebar-border space-y-1">
               <Button
                 variant="ghost"

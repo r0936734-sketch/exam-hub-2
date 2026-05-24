@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { connectToDatabase } from "@/server/db";
 import { getStudentProfileByUserId } from "@/server/user";
 import { cleanupExpiredTestsAndImages } from "@/server/cleanup";
+import { getAllActiveAdmins } from "@/server/admin";
 import { ObjectId } from "mongodb";
 import { requireSession } from "@/server/session";
 
@@ -374,6 +375,25 @@ export const getMySubmissionsServerFn = createServerFn({ method: "POST" })
       };
     } catch (error) {
       throw new Error((error as Error).message || "Failed to fetch your submissions");
+    }
+  });
+
+export const getAdminsListServerFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { token: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const db = await connectToDatabase();
+      await requireSession(db, "student", data.token);
+      const admins = await getAllActiveAdmins(db);
+
+      return {
+        admins: admins.map((admin) => ({
+          id: admin.userId,
+          name: admin.name,
+        })),
+      };
+    } catch (error) {
+      throw new Error((error as Error).message || "Failed to fetch admins list");
     }
   });
 

@@ -8,6 +8,7 @@ type AuthState = { user: User | null; role: Role | null; token: string | null };
 type Ctx = AuthState & {
   signIn: (user: User, role: Role, token: string) => void;
   signOut: () => void;
+  isInitialized?: boolean;
 };
 
 const AuthContext = createContext<Ctx | null>(null);
@@ -15,39 +16,55 @@ const KEY = "exampro.auth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ user: null, role: null, token: null });
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem(KEY) : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setState(parsed);
+    const initializeAuth = async () => {
+      try {
+        // Try to restore from localStorage first for faster UI loading
+        const raw = typeof window !== "undefined" ? localStorage.getItem(KEY) : null;
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            setState(parsed);
+          } catch (e) {
+            // Silently ignore parsing errors
+          }
+        }
+      } catch (e) {
+        // Silently ignore errors
       }
-    } catch (e) {
-      // Silently ignore parsing errors
-    }
 
-    getCurrentSessionServerFn()
-      .then((session) => {
+      try {
+        // Verify and refresh session from server
+        const session = await getCurrentSessionServerFn();
+        
         if (cancelled) return;
 
         if (session.user && session.role) {
           const next = { user: session.user, role: session.role, token: "session" };
           setState(next);
           localStorage.setItem(KEY, JSON.stringify(next));
-          return;
+        } else {
+          setState({ user: null, role: null, token: null });
+          localStorage.removeItem(KEY);
         }
-
-        setState({ user: null, role: null, token: null });
-        localStorage.removeItem(KEY);
-      })
-      .catch(() => {
+      } catch (error) {
         if (cancelled) return;
+        // Log error for debugging but don't crash
+        console.error("Session initialization error:", error);
         setState({ user: null, role: null, token: null });
         localStorage.removeItem(KEY);
-      });
+      } finally {
+        if (!cancelled) {
+          setIsInitialized(true);
+        }
+      }
+    };
+
+    initializeAuth();
 
     return () => {
       cancelled = true;
@@ -63,12 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = () => {
     setState({ user: null, role: null, token: null });
     localStorage.removeItem(KEY);
+    setIsInitialized(true);
     logoutServerFn().catch(() => {});
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, signIn, signOut }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ...state, signIn, signOut, isInitialized }}>
+      {isInitialized ? children : <InitializingAuth />}
+    </AuthContext.Provider>
   );
+}
+
+// Minimal loading indicator while auth is being initialized
+function InitializingAuth() {
+  return null; // Silent loading, or you can add a spinner here
 }
 
 export function useAuth() {

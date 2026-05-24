@@ -3,14 +3,14 @@ import type { Db } from "mongodb";
 import { verifyToken, type TokenPayload } from "@/server/jwt";
 
 const AUTH_COOKIE = "lt_grade_session";
-const ONE_DAY = 60 * 60 * 24;
+const SEVEN_DAYS = 60 * 60 * 24 * 7; // Extended to 7 days for better persistence
 
 const cookieOptions = {
   httpOnly: true,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
   path: "/",
-  maxAge: ONE_DAY,
+  maxAge: SEVEN_DAYS,
 };
 
 export type SessionUser = {
