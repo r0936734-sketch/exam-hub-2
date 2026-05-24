@@ -30,7 +30,7 @@ function toAuthResponse(user: {
   setAuthCookie(token);
 
   return {
-    token: "session",
+    token: token,
     user: {
       id: user.userId,
       username: user.name.toLowerCase().replace(/\s+/g, "_"),

@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         if (session.user && session.role) {
-          const next = { user: session.user, role: session.role, token: "session" };
+          const next = { user: session.user, role: session.role, token: session.token || "" };
           setState(next);
           // Persist to localStorage for offline access and browser recovery
           localStorage.setItem(KEY, JSON.stringify(next));

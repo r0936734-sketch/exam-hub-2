@@ -98,16 +98,35 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    // Ensure cookies are sent with all fetch requests (critical for production)
+    // Ensure cookies are sent with all SAME-ORIGIN fetch requests (critical for production)
+    // But do NOT add credentials to cross-origin requests (like Cloudinary)
     if (typeof window !== "undefined") {
       const originalFetch = window.fetch;
       if (!(window.fetch as any).__wrapped) {
         window.fetch = function (...args: any[]) {
           const [resource, config = {}] = args;
 
-          // Ensure credentials are always sent
+          // Only add credentials for same-origin requests
           if (typeof resource === "string") {
-            config.credentials = "include";
+            const isAbsolute = resource.startsWith("http://") || resource.startsWith("https://");
+            const isRelative = resource.startsWith("/");
+            
+            if (isRelative) {
+              // Relative URL - definitely same-origin
+              config.credentials = "include";
+            } else if (isAbsolute) {
+              // Absolute URL - check if it's same-origin
+              try {
+                const url = new URL(resource);
+                const currentOrigin = new URL(window.location.href).origin;
+                if (url.origin === currentOrigin) {
+                  config.credentials = "include";
+                }
+                // If cross-origin, don't add credentials (leave as default "omit")
+              } catch {
+                // If URL parsing fails, don't add credentials
+              }
+            }
           }
 
           return originalFetch.apply(window, [resource, config]);

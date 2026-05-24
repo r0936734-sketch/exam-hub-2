@@ -5,15 +5,19 @@ import { verifyToken, type TokenPayload } from "@/server/jwt";
 const AUTH_COOKIE = "lt_grade_session";
 const SEVEN_DAYS = 60 * 60 * 24 * 7; // Extended to 7 days for better persistence
 
-// Production-safe cookie options with proper settings for deployment
-const cookieOptions = {
-  httpOnly: false, // Allow JS access as fallback for browsers that block cookies
-  sameSite: "none" as const, // Allow cross-site requests
-  secure: true, // Always use secure flag (works on both localhost and production with HTTPS)
-  path: "/",
-  maxAge: SEVEN_DAYS,
-  domain: undefined, // Let browser handle domain automatically
-};
+// Cookie options that work on both localhost (HTTP) and production (HTTPS)
+function getCookieOptions() {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL;
+  
+  return {
+    httpOnly: false, // Allow JS access as fallback for browsers that block cookies
+    sameSite: isProduction ? ("none" as const) : ("lax" as const), // "none" for production, "lax" for localhost
+    secure: isProduction, // Only enforce secure flag in production (HTTPS)
+    path: "/",
+    maxAge: SEVEN_DAYS,
+    domain: undefined, // Let browser handle domain automatically
+  };
+}
 
 export type SessionUser = {
   id: string;
@@ -29,7 +33,7 @@ export type SessionResult = {
 };
 
 export function setAuthCookie(token: string) {
-  setCookie(AUTH_COOKIE, token, cookieOptions);
+  setCookie(AUTH_COOKIE, token, getCookieOptions());
 }
 
 export function clearAuthCookie() {
