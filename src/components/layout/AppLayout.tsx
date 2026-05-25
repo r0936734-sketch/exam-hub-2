@@ -25,8 +25,6 @@ import { cn } from "@/lib/utils";
 import {
   getStudentNoticesServerFn,
   getAdminsListServerFn,
-  getRecentSubmissionsByTestServerFn,
-  getAdminSubmissionsViewServerFn,
 } from "@/services/student.functions";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
@@ -77,19 +75,7 @@ export function AppLayout() {
     enabled: Boolean(token && role === "student"),
   });
 
-  const { data: studentSubmissionsData } = useQuery({
-    queryKey: ["layout-student-submissions", token],
-    queryFn: async () =>
-      getRecentSubmissionsByTestServerFn({ data: { token: token || "" } }),
-    enabled: Boolean(token && role === "student"),
-  });
 
-  const { data: adminSubmissionsData } = useQuery({
-    queryKey: ["layout-admin-submissions", token],
-    queryFn: async () =>
-      getAdminSubmissionsViewServerFn({ data: { token: token || "" } }),
-    enabled: Boolean(token && role === "admin"),
-  });
 
   const latestNotice = useMemo(() => noticeData?.notices?.[0] || null, [noticeData]);
 
@@ -121,6 +107,21 @@ export function AppLayout() {
     signOut();
     navigate({ to: "/login" });
   };
+
+  // Prevent background scroll when drawer is open
+  useEffect(() => {
+    if (open) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <div className="min-h-screen flex w-full bg-background text-foreground">
@@ -156,111 +157,6 @@ export function AppLayout() {
           })}
         </nav>
         <div className="flex-1 overflow-y-auto p-3 border-t border-sidebar-border space-y-3">
-          {/* Submissions Gallery section for students */}
-          {role === "student" && studentSubmissionsData?.tests && studentSubmissionsData.tests.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
-                <Upload className="size-3" /> Submissions Gallery
-              </p>
-              <div className="space-y-3">
-                {studentSubmissionsData.tests.map((test) => (
-                  <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
-                    <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
-                    <div className="space-y-2">
-                      {test.submissions.map((sub) => (
-                        <div key={sub.id} className="space-y-1">
-                          <p className="text-[10px] text-muted-foreground font-medium">
-                            {sub.studentName}
-                            {sub.marks !== null && ` - ${sub.marks} marks`}
-                          </p>
-                          {sub.images.length > 0 ? (
-                            <div className="flex gap-1 flex-wrap">
-                              {sub.images.slice(0, 2).map((img, idx) => (
-                                <a
-                                  key={idx}
-                                  href={img}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="w-12 h-12 rounded border border-sidebar-accent/50 overflow-hidden hover:border-primary transition-colors flex items-center justify-center bg-sidebar-accent/50"
-                                >
-                                  <img
-                                    src={img}
-                                    alt={`${sub.studentName} submission`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </a>
-                              ))}
-                              {sub.images.length > 2 && (
-                                <div className="w-12 h-12 rounded border border-sidebar-accent/50 flex items-center justify-center bg-sidebar-accent/50">
-                                  <p className="text-[8px] font-medium">+{sub.images.length - 2}</p>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground italic">No images</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Submissions Gallery section for admins */}
-          {role === "admin" && adminSubmissionsData?.tests && adminSubmissionsData.tests.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
-                <Upload className="size-3" /> Submissions Gallery
-              </p>
-              <div className="space-y-3">
-                {adminSubmissionsData.tests.map((test) => (
-                  <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
-                    <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
-                    <div className="space-y-2">
-                      {test.submissions.map((sub) => (
-                        <div key={sub.id} className="space-y-1">
-                          <p className="text-[10px] text-muted-foreground font-medium">
-                            {sub.studentName}
-                            {sub.marks !== null && ` - ${sub.marks} marks`}
-                          </p>
-                          {sub.images.length > 0 ? (
-                            <div className="flex gap-1 flex-wrap">
-                              {sub.images.slice(0, 2).map((img, idx) => (
-                                <a
-                                  key={idx}
-                                  href={img}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="w-12 h-12 rounded border border-sidebar-accent/50 overflow-hidden hover:border-primary transition-colors flex items-center justify-center bg-sidebar-accent/50"
-                                >
-                                  <img
-                                    src={img}
-                                    alt={`${sub.studentName} submission`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </a>
-                              ))}
-                              {sub.images.length > 2 && (
-                                <div className="w-12 h-12 rounded border border-sidebar-accent/50 flex items-center justify-center bg-sidebar-accent/50">
-                                  <p className="text-[8px] font-medium">+{sub.images.length - 2}</p>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground italic">No images</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-
           {/* Admins section for students */}
           {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
             <div className="space-y-2">
@@ -313,10 +209,10 @@ export function AppLayout() {
           onClick={() => setOpen(false)}
         >
           <aside
-            className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r border-sidebar-border p-4"
+            className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between p-4 flex-shrink-0 border-b border-sidebar-border">
               <div className="flex items-center gap-2">
                 <div className="size-8 rounded-lg bg-primary text-primary-foreground grid place-items-center">
                   <GraduationCap className="size-4" />
@@ -327,125 +223,35 @@ export function AppLayout() {
                 <X className="size-4" />
               </Button>
             </div>
-            <nav className="space-y-1">
-              {nav.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm hover:bg-sidebar-accent"
-                >
-                  <item.icon className="size-4" /> {item.label}
-                </Link>
-              ))}
-            </nav>
-            {/* Mobile Submissions Gallery for students */}
-            {role === "student" && studentSubmissionsData?.tests && studentSubmissionsData.tests.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-sidebar-border space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
-                  <Upload className="size-3" /> Submissions Gallery
-                </p>
-                <div className="space-y-3">
-                  {studentSubmissionsData.tests.map((test) => (
-                    <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
-                      <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
-                      <div className="space-y-2">
-                        {test.submissions.slice(0, 3).map((sub) => (
-                          <div key={sub.id} className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground font-medium">
-                              {sub.studentName}
-                              {sub.marks !== null && ` - ${sub.marks} marks`}
-                            </p>
-                            {sub.images.length > 0 ? (
-                              <div className="flex gap-1">
-                                {sub.images.slice(0, 2).map((img, idx) => (
-                                  <a
-                                    key={idx}
-                                    href={img}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-10 h-10 rounded border border-sidebar-accent/50 overflow-hidden flex items-center justify-center bg-sidebar-accent/50"
-                                  >
-                                    <img
-                                      src={img}
-                                      alt={`${sub.studentName} submission`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </a>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-[10px] text-muted-foreground italic">No images</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="flex-1 overflow-y-auto">
+              <nav className="space-y-1 px-4 pt-4">
+                {nav.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm hover:bg-sidebar-accent"
+                  >
+                    <item.icon className="size-4" /> {item.label}
+                  </Link>
+                ))}
+              </nav>
 
-            {/* Mobile Submissions Gallery for admins */}
-            {role === "admin" && adminSubmissionsData?.tests && adminSubmissionsData.tests.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-sidebar-border space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide flex items-center gap-1">
-                  <Upload className="size-3" /> Submissions Gallery
-                </p>
-                <div className="space-y-3">
-                  {adminSubmissionsData.tests.map((test) => (
-                    <div key={test.testId} className="rounded-md bg-sidebar-accent/30 p-2 space-y-2">
-                      <p className="text-xs font-medium text-sidebar-foreground truncate">{test.testTitle}</p>
-                      <div className="space-y-2">
-                        {test.submissions.slice(0, 3).map((sub) => (
-                          <div key={sub.id} className="space-y-1">
-                            <p className="text-[10px] text-muted-foreground font-medium">
-                              {sub.studentName}
-                              {sub.marks !== null && ` - ${sub.marks} marks`}
-                            </p>
-                            {sub.images.length > 0 ? (
-                              <div className="flex gap-1">
-                                {sub.images.slice(0, 2).map((img, idx) => (
-                                  <a
-                                    key={idx}
-                                    href={img}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-10 h-10 rounded border border-sidebar-accent/50 overflow-hidden flex items-center justify-center bg-sidebar-accent/50"
-                                  >
-                                    <img
-                                      src={img}
-                                      alt={`${sub.studentName} submission`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </a>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-[10px] text-muted-foreground italic">No images</p>
-                            )}
-                          </div>
-                        ))}
+              {/* Admins section for students in mobile */}
+              {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
+                <div className="px-4 pt-6 pb-4 border-t border-sidebar-border space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide">Admins</p>
+                  <div className="space-y-1">
+                    {adminsData.admins.map((admin) => (
+                      <div key={admin.id} className="rounded-md bg-sidebar-accent/40 px-3 py-2">
+                        <p className="text-xs font-medium text-sidebar-foreground">{admin.name}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            {/* Admins section for students in mobile */}
-            {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-sidebar-border space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide">Admins</p>
-                <div className="space-y-1">
-                  {adminsData.admins.map((admin) => (
-                    <div key={admin.id} className="rounded-md bg-sidebar-accent/40 px-3 py-2">
-                      <p className="text-xs font-medium text-sidebar-foreground">{admin.name}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="mt-6 pt-4 border-t border-sidebar-border space-y-1">
+              )}
+            </div>
+            <div className="border-t border-sidebar-border space-y-1 p-4 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -525,9 +331,9 @@ export function AppLayout() {
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border">
           <div
             className="grid"
-            style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${nav.filter((item) => !["Notices", "Leaderboard"].includes(item.label)).length}, minmax(0, 1fr))` }}
           >
-            {nav.map((item) => {
+            {nav.filter((item) => !["Notices", "Leaderboard"].includes(item.label)).map((item) => {
               const active = pathname.startsWith(item.to);
               return (
                 <Link
