@@ -26,6 +26,7 @@ import {
   getStudentNoticesServerFn,
   getAdminsListServerFn,
 } from "@/services/student.functions";
+import { AdminRecruitmentPopup } from "@/components/AdminRecruitmentPopup";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
@@ -352,6 +353,8 @@ export function AppLayout() {
           </div>
         </nav>
       </div>
+      
+      <AdminRecruitmentPopup />
     </div>
   );
 }
