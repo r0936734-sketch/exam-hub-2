@@ -151,11 +151,15 @@ export const getStudentDashboardServerFn = createServerFn({ method: "POST" })
         },
         recentScores: recentSubmissions.map((submission) => {
           const test = submission.test?.[0];
+          const totalMarks = (test?.questions || []).reduce(
+            (sum: number, question: any) => sum + Number(question.marks || 0),
+            0,
+          );
           return {
             id: submission._id.toString(),
             title: test?.title || "Untitled test",
             score: Number(submission.marks || 0),
-            total: 100,
+            total: totalMarks || 100, // Fallback to 100 if no questions found
             date:
               submission.evaluatedAt?.toISOString?.() ||
               submission.submittedAt?.toISOString?.() ||

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -274,6 +275,7 @@ function AdminTests() {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
               <DialogHeader>
                 <DialogTitle>Create new test</DialogTitle>
+                <DialogDescription>Upload questions with images and set test parameters</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -342,6 +344,7 @@ function AdminTests() {
                       <DialogContent className="max-w-sm">
                         <DialogHeader>
                           <DialogTitle>Choose question type</DialogTitle>
+                          <DialogDescription>Select text or image-based questions</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-3">
                           <Button

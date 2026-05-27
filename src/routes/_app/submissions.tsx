@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { FileImage, Images } from "lucide-react";
+import { useState } from "react";
+import { FileImage, Images, Info, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getRecentSubmissionsByTestServerFn } from "@/services/student.functions";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -12,6 +14,8 @@ export const Route = createFileRoute("/_app/submissions")({ component: Submissio
 
 function SubmissionsPage() {
   const { token } = useAuth();
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+  
   const { data, isLoading } = useQuery({
     queryKey: ["submissions-gallery", token],
     queryFn: async () => getRecentSubmissionsByTestServerFn({ data: { token: token || "" } }),
@@ -73,26 +77,51 @@ function SubmissionsPage() {
                       {submission.images.length > 0 ? (
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                           {submission.images.map((imageUrl, index) => (
-                            <a
+                            <div
                               key={`${submission.id}-${imageUrl}-${index}`}
-                              href={imageUrl}
-                              target="_blank"
-                              rel="noreferrer"
                               className="overflow-hidden rounded-md border bg-background transition-colors hover:border-primary"
                             >
-                              <img
-                                src={imageUrl}
-                                alt={`${submission.studentName} answer ${index + 1}`}
-                                className="aspect-[3/4] w-full object-cover"
-                              />
-                            </a>
+                              {brokenImages.has(imageUrl) ? (
+                                <div className="aspect-[3/4] w-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
+                                  <AlertCircle className="size-5" />
+                                  <p className="text-xs mt-1">Unavailable</p>
+                                </div>
+                              ) : (
+                                <a
+                                  href={imageUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`${submission.studentName} answer ${index + 1}`}
+                                    className="aspect-[3/4] w-full object-cover"
+                                    onError={() => {
+                                      setBrokenImages((prev) => new Set([...prev, imageUrl]));
+                                    }}
+                                  />
+                                </a>
+                              )}
+                            </div>
                           ))}
                         </div>
                       ) : (
                         <div className="grid min-h-32 place-items-center rounded-md border border-dashed bg-background text-muted-foreground">
                           <div className="text-center">
                             <FileImage className="mx-auto size-7" />
-                            <p className="mt-2 text-sm">No images attached</p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center justify-center gap-1 mt-2 cursor-help">
+                                    <p className="text-sm">Images deleted after 2 days</p>
+                                    <Info className="size-4" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <p>Images are automatically deleted 2 days after submission to save storage space. This helps us keep ExamHub free and accessible.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       )}

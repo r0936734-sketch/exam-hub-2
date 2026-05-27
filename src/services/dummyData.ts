@@ -26,9 +26,9 @@ export const dummyStats = {
 
 export const dummyRecentScores = [
   { id: "t1", title: "Algebra II Midterm", score: 88, total: 100, date: "2024-05-12" },
-  { id: "t2", title: "Organic Chemistry", score: 76, total: 100, date: "2024-05-05" },
+  { id: "t2", title: "Organic Chemistry", score: 76, total: 80, date: "2024-05-05" },
   { id: "t3", title: "Mechanics Quiz", score: 92, total: 100, date: "2024-04-28" },
-  { id: "t4", title: "English Literature", score: 81, total: 100, date: "2024-04-20" },
+  { id: "t4", title: "English Literature", score: 81, total: 90, date: "2024-04-20" },
 ];
 
 export const dummyPerformance = [
