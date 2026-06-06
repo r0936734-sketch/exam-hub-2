@@ -132,6 +132,40 @@ interface EvaluationFeedback {
   examWritingSuggestions: string[];
 }
 
+export function isGeminiQuotaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const maybeError = error as {
+    status?: number;
+    statusCode?: number;
+    message?: string;
+  };
+
+  return (
+    maybeError.status === 429 ||
+    maybeError.statusCode === 429 ||
+    maybeError.message?.includes("429") === true ||
+    maybeError.message?.toLowerCase().includes("quota") === true
+  );
+}
+
+async function imageUrlToInlineData(imageUrl: string) {
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch answer image: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+  return {
+    inlineData: {
+      mimeType: contentType,
+      data: Buffer.from(await response.arrayBuffer()).toString("base64"),
+    },
+  };
+}
+
 /**
  * Evaluate student's handwritten answer using Gemini Vision
  * Returns detailed feedback following university examiner standards
@@ -215,6 +249,78 @@ SUGGESTIONS:
 }
 
 /**
+ * Read and evaluate a handwritten answer image in one Gemini Vision request.
+ * This avoids spending separate requests on OCR, grading, and model answer.
+ */
+export async function evaluateAnswerFromImage(
+  imageUrl: string,
+  questionText: string,
+  marks: number,
+): Promise<{
+  evaluation: EvaluationFeedback;
+  modelAnswer: string;
+  ocrText: string;
+}> {
+  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+  const wordLimit = marks === 8 ? 125 : 200;
+
+  const prompt = `You are an experienced university examiner evaluating a handwritten exam answer from an image.
+
+Question: ${questionText}
+Marks: ${marks}
+Expected Word Limit: ${wordLimit} words
+
+Tasks:
+1. Read the handwritten answer from the image.
+2. Evaluate the extracted answer against the question.
+3. Generate a concise, high-scoring model answer for the same question.
+
+STRICT EVALUATION CRITERIA:
+1. Accuracy of concepts
+2. Completeness of response
+3. Relevance to the question
+4. Structure and clarity
+5. Technical precision
+
+Return output exactly in this format:
+OCR_TEXT:
+extracted handwritten answer text here
+SCORE: X/${marks}
+MISSING:
+- point1
+- point2
+INCORRECT:
+- point1
+- point2
+IMPROVE:
+- point1
+- point2
+SUGGESTIONS:
+- point1
+- point2
+MODEL_ANSWER:
+model answer here
+
+Rules:
+- If handwriting is unclear, use [unclear] in OCR_TEXT.
+- Do not add motivation or generic praise.
+- Keep MODEL_ANSWER within ${wordLimit} words.
+- If a section has no issues, include "- None".`;
+
+  const result = await model.generateContent([
+    await imageUrlToInlineData(imageUrl),
+    prompt,
+  ]);
+  const responseText = result.response.text().trim();
+
+  return {
+    evaluation: parseEvaluationResponse(responseText, marks),
+    modelAnswer: extractSection(responseText, "MODEL_ANSWER").trim(),
+    ocrText: extractSection(responseText, "OCR_TEXT", "SCORE:").trim(),
+  };
+}
+
+/**
  * Parse Gemini's evaluation response into structured feedback
  */
 function parseEvaluationResponse(
@@ -276,6 +382,20 @@ function extractBullets(text: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+function extractSection(
+  text: string,
+  startLabel: string,
+  endLabel?: string,
+): string {
+  const escapedStart = startLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedEnd = endLabel?.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = escapedEnd
+    ? new RegExp(`${escapedStart}:?([\\s\\S]*?)${escapedEnd}`, "i")
+    : new RegExp(`${escapedStart}:?([\\s\\S]*)`, "i");
+  const match = text.match(pattern);
+  return match?.[1]?.trim() || "";
+}
+
 // ============================================================================
 // Vision API for OCR (Handwritten Answer)
 // ============================================================================
@@ -293,14 +413,7 @@ If text is unclear, use [unclear] to mark illegible parts.
 Do not add any interpretation or correction.`;
 
   const result = await model.generateContent([
-    {
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: Buffer.from(await fetch(imageUrl).then((r) => r.arrayBuffer())).toString(
-          "base64",
-        ),
-      },
-    },
+    await imageUrlToInlineData(imageUrl),
     prompt,
   ]);
 

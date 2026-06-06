@@ -16,7 +16,11 @@ import {
   deletePendingQuestion,
 } from "@/server/aihub";
 import { COMPUTER_SCIENCE_SYLLABUS } from "@/server/seed-computer-syllabus";
-import { generateQuestion, evaluateAnswer, extractTextFromImage } from "@/server/gemini.server";
+import {
+  generateQuestion,
+  evaluateAnswerFromImage,
+  isGeminiQuotaError,
+} from "@/server/gemini.server";
 import { getCurrentSessionServerFn } from "@/services/auth.functions";
 
 function getBuiltInSyllabusCategories(subject: string) {
@@ -192,6 +196,9 @@ export const generateQuestionFn = createServerFn({
       };
     } catch (error) {
       console.error("Question generation error:", error);
+      if (isGeminiQuotaError(error)) {
+        return { error: "Daily AI quota reached. Please try again tomorrow." };
+      }
       return { error: "Failed to generate question" };
     }
   });
@@ -224,11 +231,13 @@ export const evaluateAnswerFn = createServerFn({
         return { error: "Invalid request parameters" };
       }
 
-      // Extract text from image
-      const ocrText = await extractTextFromImage(imageUrl);
-
-      // Evaluate answer
-      const { evaluation, modelAnswer } = await evaluateAnswer(ocrText, questionText, marks);
+      // Read the handwritten answer, evaluate it, and generate the model answer
+      // in one Gemini Vision request to reduce quota usage.
+      const { evaluation, modelAnswer, ocrText } = await evaluateAnswerFromImage(
+        imageUrl,
+        questionText,
+        marks,
+      );
 
       // Update progress
       await updateTopicProgress(user.id, subject, topic, evaluation.score, marks);
@@ -259,6 +268,9 @@ export const evaluateAnswerFn = createServerFn({
       };
     } catch (error) {
       console.error("Answer evaluation error:", error);
+      if (isGeminiQuotaError(error)) {
+        return { error: "Daily AI quota reached. Please try again tomorrow." };
+      }
       return { error: "Failed to evaluate answer" };
     }
   });
