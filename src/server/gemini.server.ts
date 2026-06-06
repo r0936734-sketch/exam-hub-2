@@ -28,6 +28,7 @@ export async function generateQuestion(
   marks: number,
   questionType: "theory" | "numerical" | "auto",
   context: QuestionGenerationContext = {},
+  customPrompt?: string,
 ): Promise<{ question: string; type: "theory" | "numerical" }> {
   const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
@@ -56,16 +57,32 @@ Topic: ${topic}
 Marks: ${marks}
 ${typeInstruction}
 
-Requirements:
-- University-level rigor and standard
-- Clear, concise wording
-- Testable and well-defined
-- Focus on application and understanding (not just definitions)
+DIFFICULTY RULES - IMPORTANT:
+These questions should be EASY TO MEDIUM difficulty, not hard. Follow these strict rules:
+
+For Theory Questions:
+- Test understanding and explanation, NOT deep analysis or research
+- Focus on concepts that can be answered from regular class notes
+- Avoid combining multiple major concepts into one question
+- Avoid case-study, application-heavy, or research-heavy questions
+- A student with standard class notes should be able to answer
+
+For Numerical Questions:
+- Require direct application of standard formulas, algorithms, or procedures
+- Keep calculations short and manageable (can be done in exam time)
+- Avoid lengthy computations, tricky edge cases, or multiple methods in one question
+- Use straightforward, standard problems from textbooks
+
+General Requirements:
+- Clear, concise wording that's unambiguous
+- Testable and well-defined scope
+- Appropriate for a student who studied class notes
 ${context.weakAreas ? `- Emphasize these weak areas: ${context.weakAreas.join(", ")}` : ""}
 - Never repeat questions from student's previous attempts
+${customPrompt ? `\nSPECIAL INSTRUCTION FROM STUDENT:\n${customPrompt}` : ""}
 
 IMPORTANT: Generate ONLY ONE question. No numbering, no explanation.
-Return the pure question text only.`;
+Return the pure question text only (can use basic markdown formatting like **bold** or *italic* for emphasis).`;
 
   const result = await model.generateContent(prompt);
   const questionText =

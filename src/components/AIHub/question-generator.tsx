@@ -36,6 +36,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const [selectedTopic, setSelectedTopic] = useState("");
   const [marks, setMarks] = useState<8 | 12>(8);
   const [questionType, setQuestionType] = useState<"theory" | "numerical" | "auto">("auto");
+  const [customPrompt, setCustomPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [question, setQuestion] = useState<{
@@ -111,6 +112,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           marks,
           questionType,
           subject,
+          customPrompt: customPrompt.trim(),
         },
       });
 
@@ -231,19 +233,19 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   return (
     <div className="space-y-6">
       {/* Question Generation Section */}
-      <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Generate Question</h2>
+      <Card className="p-6 dark:bg-slate-800">
+        <h2 className="text-2xl font-bold mb-4 dark:text-white">Generate Question</h2>
 
         {/* Category Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Subject Category</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject Category</label>
           <select
             value={selectedCategory}
             onChange={(e) => {
               setSelectedCategory(e.target.value);
               setSelectedTopic("");
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
             disabled={loading}
           >
             <option value="">Select a category...</option>
@@ -257,11 +259,11 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
         {/* Topic Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Topic/Subtopic</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topic/Subtopic</label>
           <select
             value={selectedTopic}
             onChange={(e) => setSelectedTopic(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
             disabled={loading || !selectedCategory}
           >
             <option value="">Select a topic...</option>
@@ -276,11 +278,11 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
         {/* Question Settings */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Marks</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Marks</label>
             <select
               value={marks}
               onChange={(e) => setMarks(parseInt(e.target.value) as 8 | 12)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               disabled={loading}
             >
               <option value={8}>8 Marks</option>
@@ -289,11 +291,11 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Question Type</label>
             <select
               value={questionType}
               onChange={(e) => setQuestionType(e.target.value as typeof questionType)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               disabled={loading}
             >
               <option value="auto">Auto Detect</option>
@@ -303,16 +305,32 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Word Limit</label>
-            <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-              <span className="text-sm font-semibold">{wordLimit} words</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Word Limit</label>
+            <div className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-slate-700">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">{wordLimit} words</span>
             </div>
           </div>
         </div>
 
+        {/* Custom Prompt */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Custom Instructions (Optional)
+          </label>
+          <input
+            type="text"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder="e.g., 'focus on practical examples', 'make it easier', 'include real-world application'"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+            disabled={loading}
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tip: Add any special instructions for question generation</p>
+        </div>
+
         {error && (
-          <Alert className="border-red-200 bg-red-50 mb-4">
-            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          <Alert className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 mb-4">
+            <AlertDescription className="text-red-800 dark:text-red-300">{error}</AlertDescription>
           </Alert>
         )}
 
@@ -335,12 +353,12 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
       {/* Generated Question Display */}
       {question && (
-        <Card className="p-6 border-blue-200 bg-blue-50">
+        <Card className="p-6 border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30">
           <div className="mb-4 flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-gray-700 mb-1">[{marks} Marks]</h3>
-              <p className="text-sm text-gray-600">Maximum Answer Length: {wordLimit} Words</p>
-              <p className="text-xs text-gray-500 mt-1">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">[{marks} Marks]</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Maximum Answer Length: {wordLimit} Words</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                 Type: {question.type.charAt(0).toUpperCase() + question.type.slice(1)}
               </p>
             </div>
@@ -359,13 +377,28 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             </div>
           </div>
 
-          <div className="bg-white rounded p-4 border border-blue-200">
-            <p className="text-lg text-gray-800 leading-relaxed">{question.text}</p>
+          <div className="bg-white rounded p-4 border border-blue-200 dark:bg-slate-800 dark:border-blue-700">
+            <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100">
+              <ReactMarkdown
+                components={{
+                  p: ({ node, ...props }) => <p className="leading-relaxed mb-3" {...props} />,
+                  strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-gray-50" {...props} />,
+                  em: ({ node, ...props }) => <em className="italic" {...props} />,
+                  ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-3 space-y-1" {...props} />,
+                  ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-3 space-y-1" {...props} />,
+                  li: ({ node, ...props }) => <li className="text-gray-700 dark:text-gray-300" {...props} />,
+                  code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100 font-mono" {...props} />,
+                  pre: ({ node, ...props }) => <pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded overflow-x-auto mb-3" {...props} />,
+                }}
+              >
+                {question.text}
+              </ReactMarkdown>
+            </div>
           </div>
 
-          <div className="mt-4 p-4 bg-white rounded border border-blue-200">
-            <h4 className="font-semibold text-gray-700 mb-2">Tips:</h4>
-            <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+          <div className="mt-4 p-4 bg-white dark:bg-slate-700 rounded border border-blue-200 dark:border-blue-700">
+            <h4 className="font-semibold text-gray-700 dark:text-gray-200 mb-2">Tips:</h4>
+            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
               <li>Read the question carefully and understand all parts</li>
               <li>Keep your answer concise and within the word limit</li>
               <li>Use proper diagrams or derivations where necessary</li>
@@ -377,19 +410,19 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
       {/* Answer Evaluation Section */}
       {question && (
-        <Card className="p-6 border-green-200 bg-green-50">
+        <Card className="p-6 border-green-200 bg-green-50 dark:bg-slate-800 dark:border-green-900">
           <div className="mb-6">
-            <h3 className="text-xl font-bold mb-2">Upload Your Answer</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-xl font-bold mb-2 dark:text-white">Upload Your Answer</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               Write your answer to the question above. Take a clear photo and upload it below for
               instant evaluation.
             </p>
             {/* Question Reference */}
-            <div className="p-3 bg-white rounded border-l-4 border-blue-500 mb-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+            <div className="p-3 bg-white dark:bg-slate-700 rounded border-l-4 border-blue-500 dark:border-blue-600 mb-4">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
                 Question Being Evaluated:
               </p>
-              <p className="text-sm text-gray-700 line-clamp-2">{question.text}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{question.text}</p>
             </div>
           </div>
 
@@ -398,8 +431,8 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             <div className="space-y-4">
               {/* Image Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Answer Image</label>
-                <div className="border-2 border-dashed border-green-400 rounded-lg p-8 text-center hover:border-green-500 hover:bg-green-100 transition">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Answer Image</label>
+                <div className="border-2 border-dashed border-green-400 dark:border-green-600 rounded-lg p-8 text-center hover:border-green-500 dark:hover:border-green-500 hover:bg-green-100 dark:hover:bg-green-900/20 transition">
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/jpg"
@@ -410,7 +443,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                   />
                   <label htmlFor="image-upload" className="cursor-pointer block">
                     <svg
-                      className="mx-auto h-12 w-12 text-green-600 mb-2"
+                      className="mx-auto h-12 w-12 text-green-600 dark:text-green-500 mb-2"
                       stroke="currentColor"
                       fill="none"
                       viewBox="0 0 48 48"
@@ -422,7 +455,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    <p className="font-semibold text-gray-700 mb-1">
+                    <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
                       Click to upload or drag and drop
                     </p>
                     <p className="text-sm text-gray-500">JPG, PNG up to 10MB</p>
@@ -443,9 +476,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               )}
 
               {evaluationError && (
-                <Alert className="border-red-200 bg-red-50">
+                <Alert className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30">
                   <AlertCircle className="w-4 h-4" />
-                  <AlertDescription className="text-red-800">{evaluationError}</AlertDescription>
+                  <AlertDescription className="text-red-800 dark:text-red-300">{evaluationError}</AlertDescription>
                 </Alert>
               )}
 
@@ -472,34 +505,34 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
           {/* Evaluation Results */}
           {evaluation && (
-            <div className="mt-6 space-y-4 border-t border-green-200 pt-6">
+            <div className="mt-6 space-y-4 border-t border-green-200 dark:border-green-900 pt-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-lg p-4 border-l-4 border-green-600">
-                  <p className="text-sm text-gray-600 mb-1">Your Score</p>
-                  <p className="text-3xl font-bold text-green-600">
+                <div className="bg-white dark:bg-slate-700 rounded-lg p-4 border-l-4 border-green-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Your Score</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">
                     {evaluation.score}/{marks}
                   </p>
                 </div>
-                <div className="bg-white rounded-lg p-4 border-l-4 border-blue-600">
-                  <p className="text-sm text-gray-600 mb-1">Percentage</p>
-                  <p className="text-3xl font-bold text-blue-600">
+                <div className="bg-white dark:bg-slate-700 rounded-lg p-4 border-l-4 border-blue-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Percentage</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                     {Math.round((evaluation.score / marks) * 100)}%
                   </p>
                 </div>
               </div>
 
               {evaluation.feedback && (
-                <div className="bg-white rounded-lg p-4 space-y-3">
+                <div className="bg-white dark:bg-slate-700 rounded-lg p-4 space-y-3">
                   {evaluation.feedback.missingConcepts?.length > 0 && (
                     <div>
-                      <p className="font-semibold text-red-600 text-sm mb-2">
+                      <p className="font-semibold text-red-600 dark:text-red-400 text-sm mb-2">
                         ❌ Missing Concepts:
                       </p>
-                      <ul className="text-sm text-gray-700 space-y-1">
+                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.missingConcepts.map((concept: string, idx: number) => (
                           <li key={idx} className="flex items-start">
                             <span className="mr-2">•</span>
-                            <span>{concept}</span>
+                            <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{concept}</ReactMarkdown></span>
                           </li>
                         ))}
                       </ul>
@@ -507,16 +540,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                   )}
 
                   {evaluation.feedback.incorrectStatements?.length > 0 && (
-                    <div className="pt-2 border-t border-gray-200">
-                      <p className="font-semibold text-orange-600 text-sm mb-2">
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <p className="font-semibold text-orange-600 dark:text-orange-400 text-sm mb-2">
                         ⚠️ Incorrect Statements:
                       </p>
-                      <ul className="text-sm text-gray-700 space-y-1">
+                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.incorrectStatements.map(
                           (stmt: string, idx: number) => (
                             <li key={idx} className="flex items-start">
                               <span className="mr-2">•</span>
-                              <span>{stmt}</span>
+                              <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{stmt}</ReactMarkdown></span>
                             </li>
                           ),
                         )}
@@ -525,15 +558,15 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                   )}
 
                   {evaluation.feedback.areasToImprove?.length > 0 && (
-                    <div className="pt-2 border-t border-gray-200">
-                      <p className="font-semibold text-blue-600 text-sm mb-2">
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <p className="font-semibold text-blue-600 dark:text-blue-400 text-sm mb-2">
                         💡 Areas to Improve:
                       </p>
-                      <ul className="text-sm text-gray-700 space-y-1">
+                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.areasToImprove.map((area: string, idx: number) => (
                           <li key={idx} className="flex items-start">
                             <span className="mr-2">•</span>
-                            <span>{area}</span>
+                            <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{area}</ReactMarkdown></span>
                           </li>
                         ))}
                       </ul>
@@ -541,16 +574,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                   )}
 
                   {evaluation.feedback.examWritingSuggestions?.length > 0 && (
-                    <div className="pt-2 border-t border-gray-200">
-                      <p className="font-semibold text-purple-600 text-sm mb-2">
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <p className="font-semibold text-purple-600 dark:text-purple-400 text-sm mb-2">
                         📝 Exam Writing Tips:
                       </p>
-                      <ul className="text-sm text-gray-700 space-y-1">
+                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.examWritingSuggestions.map(
                           (tip: string, idx: number) => (
                             <li key={idx} className="flex items-start">
                               <span className="mr-2">•</span>
-                              <span>{tip}</span>
+                              <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{tip}</ReactMarkdown></span>
                             </li>
                           ),
                         )}
@@ -561,17 +594,17 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               )}
 
               {evaluation.modelAnswer && (
-                <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-600">
-                  <p className="font-semibold text-gray-700 mb-2">📚 Model Answer:</p>
-                  <div className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-600 dark:border-blue-500">
+                  <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">📚 Model Answer:</p>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm max-w-none dark:prose-invert">
                     <ReactMarkdown
                       components={{
                         p: ({ node, ...props }: any) => <p className="mb-2" {...props} />,
                         strong: ({ node, ...props }: any) => (
-                          <strong className="font-bold text-gray-900" {...props} />
+                          <strong className="font-bold text-gray-900 dark:text-gray-100" {...props} />
                         ),
                         em: ({ node, ...props }: any) => (
-                          <em className="italic text-gray-800" {...props} />
+                          <em className="italic text-gray-800 dark:text-gray-200" {...props} />
                         ),
                         ul: ({ node, ...props }: any) => (
                           <ul className="list-disc list-inside mb-2 ml-2" {...props} />
@@ -582,30 +615,30 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                         li: ({ node, ...props }: any) => <li className="mb-1" {...props} />,
                         code: ({ node, ...props }: any) => (
                           <code
-                            className="bg-gray-200 px-2 py-1 rounded text-xs font-mono"
+                            className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono text-gray-900 dark:text-gray-100"
                             {...props}
                           />
                         ),
                         pre: ({ node, ...props }: any) => (
                           <pre
-                            className="bg-gray-100 p-3 rounded mb-2 overflow-x-auto"
+                            className="bg-gray-100 dark:bg-gray-800 p-3 rounded mb-2 overflow-x-auto text-gray-900 dark:text-gray-100"
                             {...props}
                           />
                         ),
                         blockquote: ({ node, ...props }: any) => (
                           <blockquote
-                            className="border-l-4 border-blue-400 pl-3 italic text-gray-700 mb-2"
+                            className="border-l-4 border-blue-400 dark:border-blue-500 pl-3 italic text-gray-700 dark:text-gray-300 mb-2"
                             {...props}
                           />
                         ),
                         h1: ({ node, ...props }: any) => (
-                          <h1 className="text-lg font-bold mb-2" {...props} />
+                          <h1 className="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100" {...props} />
                         ),
                         h2: ({ node, ...props }: any) => (
-                          <h2 className="text-base font-bold mb-2" {...props} />
+                          <h2 className="text-base font-bold mb-2 text-gray-900 dark:text-gray-100" {...props} />
                         ),
                         h3: ({ node, ...props }: any) => (
-                          <h3 className="text-sm font-bold mb-2" {...props} />
+                          <h3 className="text-sm font-bold mb-2 text-gray-900 dark:text-gray-100" {...props} />
                         ),
                       }}
                     >

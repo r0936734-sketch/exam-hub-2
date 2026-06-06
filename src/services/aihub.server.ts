@@ -128,6 +128,7 @@ export const generateQuestionFn = createServerFn({
       marks: number;
       questionType: "theory" | "numerical" | "auto";
       subject: string;
+      customPrompt?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -137,7 +138,7 @@ export const generateQuestionFn = createServerFn({
         return { error: "Unauthorized" };
       }
 
-      const { topic, marks, questionType, subject } = data;
+      const { topic, marks, questionType, subject, customPrompt } = data;
 
       // Validation
       if (!topic || ![8, 12].includes(marks) || !questionType || !subject) {
@@ -164,7 +165,7 @@ export const generateQuestionFn = createServerFn({
       }
 
       // Generate question
-      const { question, type } = await generateQuestion(topic, marks, questionType, context);
+      const { question, type } = await generateQuestion(topic, marks, questionType, context, customPrompt);
 
       // Check for duplicates
       const questionHash = generateQuestionHash(question);
@@ -175,7 +176,7 @@ export const generateQuestionFn = createServerFn({
 
       if (isDuplicate) {
         // Retry if duplicate
-        const retry = await generateQuestion(topic, marks, questionType, context);
+        const retry = await generateQuestion(topic, marks, questionType, context, customPrompt);
         finalQuestion = retry.question;
         finalType = retry.type;
       }

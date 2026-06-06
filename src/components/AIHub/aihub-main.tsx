@@ -10,20 +10,20 @@ export function AIHubMain() {
   const [subject, setSubject] = useState("Computer Science");
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 text-foreground">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">AI Hub</h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Personalized exam preparation with AI-powered question generation and answer evaluation
         </p>
       </div>
 
       {/* Subject Selector */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="mb-6 p-4 rounded-lg bg-muted/40">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Subject
         </label>
-        <div className="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-gray-700">
+        <div className="w-full md:w-48 px-3 py-2 border border-input rounded-md shadow-sm bg-background text-foreground">
           Computer Science
         </div>
       </div>
