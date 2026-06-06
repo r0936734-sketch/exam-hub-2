@@ -99,7 +99,7 @@ function AdminTests() {
         setDeadline(parsed.deadline);
         setQuestions(parsed.questions);
       } catch (e) {
-        console.error("Failed to load draft:", e);
+        // Silent failure - draft not loaded
       }
     }
   }, []);
@@ -145,7 +145,6 @@ function AdminTests() {
       });
       toast.success("Image uploaded successfully");
     } catch (error) {
-      console.error("Image upload error:", error);
       toast.error((error as Error).message || "Failed to upload image");
     } finally {
       setUploadingQuestionId(null);
@@ -235,7 +234,6 @@ function AdminTests() {
       setOpen(false);
       refetch();
     } catch (error) {
-      console.error("Save test error:", error);
       toast.error((error as Error).message || "Failed to save test");
     } finally {
       setIsSaving(false);

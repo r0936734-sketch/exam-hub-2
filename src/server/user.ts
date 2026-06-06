@@ -34,6 +34,12 @@ export interface User {
   updatedAt: Date;
 }
 
+const PROTECTED_STUDENT_IDS = new Set(["STU001"]);
+
+function isProtectedStudentId(userId: string): boolean {
+  return PROTECTED_STUDENT_IDS.has(userId.trim().toUpperCase());
+}
+
 export async function createUser(
   db: Db,
   data: { name: string; password: string; role: "student" },
@@ -140,7 +146,8 @@ export async function getAllStudents(db: Db): Promise<
     id: string;
     userId: string;
     name: string;
-    password: string;
+    password?: string;
+    protected: boolean;
     active: boolean;
     createdAt: string;
   }>
@@ -151,14 +158,19 @@ export async function getAllStudents(db: Db): Promise<
     .sort({ createdAt: -1 })
     .toArray()
     .then((users) =>
-      users.map((user) => ({
-        id: user.userId,
-        userId: user.userId,
-        name: user.name,
-        password: user.password,
-        active: user.active !== false,
-        createdAt: user.createdAt.toISOString(),
-      })),
+      users.map((user) => {
+        // Hide password for STU001 - not visible to any admin
+        const isProtectedUser = isProtectedStudentId(user.userId);
+        return {
+          id: user.userId,
+          userId: user.userId,
+          name: user.name,
+          password: isProtectedUser ? undefined : user.password,
+          protected: isProtectedUser,
+          active: user.active !== false,
+          createdAt: user.createdAt.toISOString(),
+        };
+      }),
     );
 }
 
@@ -167,6 +179,10 @@ export async function updateStudentActive(
   userId: string,
   active: boolean,
 ): Promise<boolean> {
+  if (isProtectedStudentId(userId)) {
+    throw new Error("This protected student account cannot be deactivated");
+  }
+
   const result = await db.collection<User>("users").updateOne(
     { userId, role: "student" },
     {
@@ -182,6 +198,11 @@ export async function updateStudentActive(
 
 export async function deleteStudent(db: Db, userId: string): Promise<boolean> {
   const normalizedUserId = userId.trim().toUpperCase();
+
+  if (isProtectedStudentId(normalizedUserId)) {
+    throw new Error("This protected student account cannot be deleted");
+  }
+
   const student = await db.collection<User>("users").findOne({
     userId: normalizedUserId,
     role: "student",

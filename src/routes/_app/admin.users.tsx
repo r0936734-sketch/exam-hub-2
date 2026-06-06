@@ -95,7 +95,12 @@ function AdminUsers() {
     }
   };
 
-  const remove = async (userId: string) => {
+  const remove = async (userId: string, protectedAccount = false) => {
+    if (protectedAccount) {
+      toast.error("This protected student account cannot be deleted");
+      return;
+    }
+
     const confirmed = window.confirm(`Delete student ${userId}? This cannot be undone.`);
     if (!confirmed) return;
 
@@ -204,7 +209,7 @@ function AdminUsers() {
                           <div>
                             <span className="font-medium">{s.name}</span>
                             <p className="lg:hidden text-xs text-muted-foreground">
-                              Password: <span className="font-mono">{s.password}</span>
+                              Password: <span className="font-mono">{s.password || "•••••••• (Protected)"}</span>
                             </p>
                           </div>
                         </div>
@@ -213,7 +218,7 @@ function AdminUsers() {
                         {s.userId}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell font-mono text-xs">
-                        {s.password}
+                        {s.password || <span className="text-amber-600 font-semibold">Protected Account</span>}
                       </TableCell>
                       <TableCell>
                         <Badge variant={s.active ? "default" : "secondary"}>
@@ -222,13 +227,17 @@ function AdminUsers() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
-                          <Switch checked={s.active} onCheckedChange={(c) => toggle(s.id, c)} />
+                          <Switch
+                            checked={s.active}
+                            onCheckedChange={(c) => toggle(s.id, c)}
+                            disabled={s.protected}
+                          />
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            onClick={() => remove(s.userId)}
-                            disabled={deleting === s.userId}
+                            onClick={() => remove(s.userId, s.protected)}
+                            disabled={deleting === s.userId || s.protected}
                             aria-label={`Delete ${s.name}`}
                           >
                             {deleting === s.userId ? (

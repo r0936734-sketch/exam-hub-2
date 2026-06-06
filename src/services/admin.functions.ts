@@ -349,8 +349,6 @@ export const createTestServerFn = createServerFn({ method: "POST" })
         updatedAt: now,
       };
 
-      console.log("Creating test:", test.title, "with", test.questions.length, "questions");
-
       const result = await db.collection("tests").insertOne(test as any);
 
       if (!result.insertedId) {
@@ -569,62 +567,7 @@ export const evaluateSubmissionServerFn = createServerFn({ method: "POST" })
 
 // Admin Recruitment Functions
 
-type AdminRecruitmentInput = {
-  token: string;
-  interested: boolean;
-  suggestedPassword?: string;
-  enthusiasmMsg?: string;
-};
 
-export const submitAdminRecruitmentResponseServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: AdminRecruitmentInput) => data)
-  .handler(async ({ data }) => {
-    try {
-      await initializeDefaultAdmin();
-      const db = await connectToDatabase();
-      const { payload: student } = await requireSession(db, "student", data.token);
-
-      // Only save if interested (yes response)
-      if (!data.interested) {
-        return { ok: true, message: "Response recorded" };
-      }
-
-      if (!data.suggestedPassword || !data.enthusiasmMsg) {
-        throw new Error("Password and enthusiasm message are required");
-      }
-
-      const suggestedPassword = data.suggestedPassword.trim();
-      const enthusiasmMsg = data.enthusiasmMsg.trim();
-
-      if (suggestedPassword.length < 3) {
-        throw new Error("Password must be at least 3 characters");
-      }
-
-      if (enthusiasmMsg.length < 10) {
-        throw new Error("Enthusiasm message must be at least 10 characters");
-      }
-
-      const now = new Date();
-      const result = await db.collection("noticereply").insertOne({
-        studentId: student.userId,
-        studentName: student.name,
-        interested: true,
-        suggestedPassword,
-        enthusiasmMsg,
-        status: "pending", // pending, approved, rejected
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      return {
-        ok: true,
-        replyId: result.insertedId.toString(),
-        message: "Thank you! Your admin request has been submitted. You will be notified when the decision is made.",
-      };
-    } catch (error) {
-      throw new Error((error as Error).message || "Failed to submit admin recruitment response");
-    }
-  });
 
 export const getAdminRecruitmentRepliesServerFn = createServerFn({ method: "POST" })
   .inputValidator((data: { token: string }) => data)

@@ -13,5 +13,13 @@ export default defineConfig({
     preview: {
       allowedHosts: true,
     },
+
+    optimizeDeps: {
+      exclude: ["@mapbox/node-pre-gyp", "mock-aws-s3", "aws-sdk", "nock"],
+    },
+
+    ssr: {
+      external: ["@mapbox/node-pre-gyp", "mock-aws-s3", "aws-sdk", "nock"],
+    },
   },
 });

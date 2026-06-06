@@ -26,7 +26,6 @@ function getPublicIdFromUrl(url: string): string | null {
 async function deleteCloudinaryImage(publicId: string): Promise<boolean> {
   const config = getCloudinaryConfig();
   if (!config || !publicId) {
-    console.warn(`[Cloudinary] Skipped deletion: missing config or publicId (${publicId})`);
     return false;
   }
 
@@ -47,24 +46,18 @@ async function deleteCloudinaryImage(publicId: string): Promise<boolean> {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.warn(`[Cloudinary] Failed to delete image ${publicId}:`, {
-        status: response.status,
-        error: errorData.error?.message || response.statusText,
-      });
+      console.error("[Cloudinary] Failed to delete image - HTTP error");
       return false;
     }
 
     const result = await response.json();
     if (result.result === "ok") {
-      console.log(`[Cloudinary] Successfully deleted image: ${publicId}`);
       return true;
     } else {
-      console.warn(`[Cloudinary] Unexpected response for ${publicId}:`, result);
       return false;
     }
   } catch (error) {
-    console.error(`[Cloudinary] Error deleting image ${publicId}:`, error instanceof Error ? error.message : String(error));
+    console.error("[Cloudinary] Error deleting image:", error instanceof Error ? error.message : "Unknown error");
     return false;
   }
 }
@@ -76,13 +69,7 @@ export async function deleteCloudinaryImages(publicIds: string[]) {
     return;
   }
 
-  console.log(`[Cloudinary] Starting deletion of ${uniqueIds.length} images...`);
   const results = await Promise.all(uniqueIds.map((id) => deleteCloudinaryImage(id)));
-  
-  const successCount = results.filter(Boolean).length;
-  const failureCount = results.length - successCount;
-  
-  console.log(`[Cloudinary] Batch deletion complete: ${successCount} succeeded, ${failureCount} failed`);
 }
 
 function getDeadlineDate(deadline: unknown): Date | null {
@@ -160,7 +147,6 @@ export async function deleteTestFilesAndSubmissions(
 async function clearSubmissionImages(db: Db, submission: any, now: Date) {
   const publicIds = getSubmissionImagePublicIds(submission);
   if (publicIds.length > 0) {
-    console.log(`[Cleanup] Clearing ${publicIds.length} images from submission ${submission._id}`);
     await deleteCloudinaryImages(publicIds);
   }
   
@@ -175,18 +161,12 @@ async function clearSubmissionImages(db: Db, submission: any, now: Date) {
       },
     },
   );
-  
-  if (result.modifiedCount > 0) {
-    console.log(`[Cleanup] Submission ${submission._id} marked as cleaned`);
-  }
 }
 
 export async function cleanupExpiredTestsAndImages(db: Db) {
   const now = new Date();
   const imageCutoff = new Date(now.getTime() - IMAGE_TTL_MS);
   
-  console.log(`[Cleanup] Starting cleanup process - Cutoff time: ${imageCutoff.toISOString()}`);
-
   const tests = await db
     .collection("tests")
     .find({
@@ -207,7 +187,6 @@ export async function cleanupExpiredTestsAndImages(db: Db) {
     const questionPublicIds = getQuestionImagePublicIds(test.questions || []);
 
     if (shouldClearQuestionImages && !test.questionsClearedAt && questionPublicIds.length > 0) {
-      console.log(`[Cleanup] Clearing ${questionPublicIds.length} question images from test ${test._id}`);
       await deleteCloudinaryImages(questionPublicIds);
     }
 
@@ -294,5 +273,4 @@ export async function cleanupExpiredTestsAndImages(db: Db) {
     }
   }
   
-  console.log(`[Cleanup] Cleanup process completed`);
 }

@@ -20,6 +20,7 @@ import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppNoticesRouteImport } from './routes/_app/notices'
 import { Route as AppLeaderboardRouteImport } from './routes/_app/leaderboard'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppAihubRouteImport } from './routes/_app/aihub'
 import { Route as AppTestsTestIdRouteImport } from './routes/_app/tests.$testId'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
 import { Route as AppAdminTestsRouteImport } from './routes/_app/admin.tests'
@@ -82,6 +83,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAihubRoute = AppAihubRouteImport.update({
+  id: '/aihub',
+  path: '/aihub',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTestsTestIdRoute = AppTestsTestIdRouteImport.update({
   id: '/$testId',
   path: '/$testId',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/aihub': typeof AppAihubRoute
   '/dashboard': typeof AppDashboardRoute
   '/leaderboard': typeof AppLeaderboardRoute
   '/notices': typeof AppNoticesRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/aihub': typeof AppAihubRoute
   '/dashboard': typeof AppDashboardRoute
   '/leaderboard': typeof AppLeaderboardRoute
   '/notices': typeof AppNoticesRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
   '/login': typeof LoginRoute
+  '/_app/aihub': typeof AppAihubRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/leaderboard': typeof AppLeaderboardRoute
   '/_app/notices': typeof AppNoticesRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-login'
     | '/login'
+    | '/aihub'
     | '/dashboard'
     | '/leaderboard'
     | '/notices'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-login'
     | '/login'
+    | '/aihub'
     | '/dashboard'
     | '/leaderboard'
     | '/notices'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/admin-login'
     | '/login'
+    | '/_app/aihub'
     | '/_app/dashboard'
     | '/_app/leaderboard'
     | '/_app/notices'
@@ -324,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/aihub': {
+      id: '/_app/aihub'
+      path: '/aihub'
+      fullPath: '/aihub'
+      preLoaderRoute: typeof AppAihubRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tests/$testId': {
       id: '/_app/tests/$testId'
       path: '/$testId'
@@ -401,6 +420,7 @@ const AppAdminTestsRouteWithChildren = AppAdminTestsRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAihubRoute: typeof AppAihubRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppLeaderboardRoute: typeof AppLeaderboardRoute
   AppNoticesRoute: typeof AppNoticesRoute
@@ -416,6 +436,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAihubRoute: AppAihubRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppLeaderboardRoute: AppLeaderboardRoute,
   AppNoticesRoute: AppNoticesRoute,

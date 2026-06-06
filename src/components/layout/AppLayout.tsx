@@ -14,6 +14,7 @@ import {
   X,
   GraduationCap,
   Upload,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -26,7 +27,6 @@ import {
   getStudentNoticesServerFn,
   getAdminsListServerFn,
 } from "@/services/student.functions";
-import { AdminRecruitmentPopup } from "@/components/AdminRecruitmentPopup";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
@@ -34,6 +34,7 @@ const studentNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tests", label: "Tests", icon: FileText },
   { to: "/submissions", label: "Submissions", icon: Upload },
+  { to: "/aihub", label: "AI Hub", icon: Sparkles },
   { to: "/syllabus", label: "Syllabus", icon: BookOpen },
   { to: "/notices", label: "Notices", icon: Megaphone },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
@@ -353,8 +354,6 @@ export function AppLayout() {
           </div>
         </nav>
       </div>
-      
-      <AdminRecruitmentPopup />
     </div>
   );
 }
