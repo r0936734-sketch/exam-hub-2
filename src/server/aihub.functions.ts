@@ -1,4 +1,4 @@
-import { json, text } from "@tanstack/react-start";
+import { json } from "@tanstack/react-start";
 import {
   isAIHubEnabled,
   verifyAIHubPasscode,
@@ -66,11 +66,11 @@ export async function verifyAIHubPasscodeEndpoint(
   const body = await request.json();
   const { passcode } = body as { passcode: string };
 
-  if (!passcode) {
+  if (!passcode || !passcode.trim()) {
     return json({ error: "Passcode required" }, { status: 400 });
   }
 
-  const verified = await verifyAIHubPasscode(user.id, passcode);
+  const verified = await verifyAIHubPasscode(user.id, passcode.trim());
 
   if (!verified) {
     return json({ error: "Invalid passcode" }, { status: 403 });

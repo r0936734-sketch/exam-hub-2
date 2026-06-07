@@ -51,12 +51,16 @@ export async function createUser(
     throw new Error("name and password are required");
   }
 
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters");
+  }
+
   const userId = await generateNextUserId(db);
 
   const user: User = {
     userId,
     name,
-    password, // Note: In production, hash this with bcrypt
+    password: password,
     role: data.role,
     avgMarks: 0,
     totalTests: 0,

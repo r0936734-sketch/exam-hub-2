@@ -187,12 +187,15 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
           <div className="space-y-3">
             {topicPerformance.map((topic: any, index: number) => {
               const topicData = progress?.topicProgress?.[topic.topic];
-              const difficulty = topicData?.difficulty || "medium";
+              const rawDifficulty = topicData?.difficulty;
+              const difficulty =
+                rawDifficulty === "easy" || rawDifficulty === "hard" ? rawDifficulty : "medium";
               const difficultyColor = {
                 easy: "bg-green-100 text-green-800",
                 medium: "bg-yellow-100 text-yellow-800",
                 hard: "bg-red-100 text-red-800",
-              };
+              } satisfies Record<"easy" | "medium" | "hard", string>;
+              const difficultyKey = difficulty as "easy" | "medium" | "hard";
 
               return (
                 <div key={index} className="p-4 border border-gray-200 rounded-lg">
@@ -200,7 +203,7 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
                     <h4 className="font-semibold text-gray-800">
                       {topic.topic}
                     </h4>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyColor[difficulty]}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${difficultyColor[difficultyKey]}`}>
                       {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
                     </span>
                   </div>

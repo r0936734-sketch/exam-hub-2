@@ -23,6 +23,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { AIHubAccessPopup } from "@/components/AIHubAccessPopup";
 import {
   getStudentNoticesServerFn,
   getAdminsListServerFn,
@@ -354,6 +355,11 @@ export function AppLayout() {
           </div>
         </nav>
       </div>
+
+      {/* AI Hub Access Popup for target students */}
+      {role === "student" && user && (
+        <AIHubAccessPopup userId={user.id} userName={user.name} token={token || ""} />
+      )}
     </div>
   );
 }

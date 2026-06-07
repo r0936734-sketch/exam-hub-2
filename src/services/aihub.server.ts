@@ -3,7 +3,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
   isAIHubEnabled,
-  verifyAIHubPasscode,
+  verifyAIHubPasscodeWithRateLimit,
   getUserProgress,
   updateTopicProgress,
   getWeakTopics,
@@ -75,7 +75,7 @@ export const getAIHubAccessStatusFn = createServerFn({
 });
 
 /**
- * Verify AI Hub passcode
+ * Verify AI Hub passcode with rate limiting
  */
 export const verifyAIHubPasscodeFn = createServerFn({
   method: "POST",
@@ -99,9 +99,11 @@ export const verifyAIHubPasscodeFn = createServerFn({
         return { error: "Passcode is required", verified: false };
       }
 
-      const verified = await verifyAIHubPasscode(user.id, passcode);
-      if (!verified) {
-        return { error: "Invalid passcode", verified: false };
+      // Use rate-limited verification
+      const result = await verifyAIHubPasscodeWithRateLimit(user.id, passcode);
+      
+      if (!result.verified) {
+        return { error: result.message || "Invalid passcode", verified: false };
       }
 
       // Generate session token
@@ -119,6 +121,7 @@ export const verifyAIHubPasscodeFn = createServerFn({
       return { error: "Failed to verify passcode", verified: false };
     }
   });
+  
 
 /**
  * Generate a new university-style question

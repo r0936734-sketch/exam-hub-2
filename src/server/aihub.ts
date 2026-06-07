@@ -11,6 +11,7 @@ export interface AIHubUser {
   aiHubEnabled: boolean;
   role: "student" | "premium_aihub" | "admin";
   passcodeHash: string; // Bcrypt hashed
+  passReceivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -111,6 +112,44 @@ export async function isAIHubEnabled(userId: string): Promise<boolean> {
 }
 
 /**
+ * Check whether the student confirmed receiving their AI Hub pass.
+ */
+export async function hasAIHubPassBeenReceived(userId: string): Promise<boolean> {
+  const db = await connectToDatabase();
+  const usersCollection = db.collection<AIHubUser>("aihub_users");
+
+  const user = await usersCollection.findOne({ userId });
+  return Boolean(user?.passReceivedAt);
+}
+
+/**
+ * Permanently hide the AI Hub pass reminder after the student confirms.
+ */
+export async function markAIHubPassReceived(userId: string): Promise<void> {
+  const db = await connectToDatabase();
+  const usersCollection = db.collection<AIHubUser>("aihub_users");
+  const now = new Date();
+
+  await usersCollection.updateOne(
+    { userId },
+    {
+      $set: {
+        passReceivedAt: now,
+        updatedAt: now,
+      },
+      $setOnInsert: {
+        userId,
+        aiHubEnabled: true,
+        role: "premium_aihub",
+        passcodeHash: "",
+        createdAt: now,
+      },
+    },
+    { upsert: true },
+  );
+}
+
+/**
  * Verify AI Hub passcode
  * Secure comparison using bcrypt
  */
@@ -135,9 +174,9 @@ export async function verifyAIHubPasscode(
     return false;
   }
 
-  // Ensure both are strings
+  // Ensure both are strings and trim whitespace
   const hashStr = String(user.passcodeHash);
-  const passcodeStr = String(passcode);
+  const passcodeStr = String(passcode).trim();
 
   try {
     const result = await bcrypt.compare(passcodeStr, hashStr);
@@ -159,7 +198,8 @@ export async function setAIHubPasscode(
   const db = await connectToDatabase();
   const usersCollection = db.collection<AIHubUser>("aihub_users");
 
-  const hashedPasscode = await bcrypt.hash(plainPasscode, 12);
+  const trimmedPasscode = plainPasscode.trim();
+  const hashedPasscode = await bcrypt.hash(trimmedPasscode, 12);
 
   await usersCollection.updateOne(
     { userId },
@@ -194,6 +234,128 @@ export async function setAIHubAccess(
     },
     { upsert: true },
   );
+}
+
+// ============================================================================
+// Passcode Verification
+// ============================================================================
+
+/**
+ * Verify AI Hub passcode with rate limiting
+ */
+export async function verifyAIHubPasscodeWithRateLimit(
+  userId: string,
+  passcode: string,
+): Promise<{ verified: boolean; message?: string }> {
+  const verified = await verifyAIHubPasscode(userId, passcode);
+  return { verified };
+}
+
+/**
+ * Generate secure random passcode
+ */
+function generateSecurePasscode(length: number = 8): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+
+  for (let i = 0; i < length; i++) {
+    result += chars[array[i] % chars.length];
+  }
+  return result;
+}
+
+/**
+ * Create AI Hub user with secure random passcode
+ */
+export async function createAIHubUserSecure(
+  studentUserId: string,
+  adminUserId: string,
+): Promise<{ userId: string; temporaryPasscode: string }> {
+  const db = await connectToDatabase();
+
+  // Verify student exists
+  const student = await db
+    .collection("users")
+    .findOne({ userId: studentUserId, role: "student" });
+
+  if (!student) {
+    throw new Error("Student not found");
+  }
+
+  // Check if already has AI Hub access
+  const existing = await db
+    .collection("aihub_users")
+    .findOne({ userId: studentUserId });
+
+  if (existing?.aiHubEnabled) {
+    throw new Error("User already has AI Hub access");
+  }
+
+  // Generate secure random passcode
+  const temporaryPasscode = generateSecurePasscode(8);
+  const hashedPasscode = await bcrypt.hash(temporaryPasscode, 12);
+
+  // Create AI Hub user
+  const aiHubUser: AIHubUser = {
+    userId: studentUserId,
+    aiHubEnabled: true,
+    role: "premium_aihub",
+    passcodeHash: hashedPasscode,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  await db
+    .collection("aihub_users")
+    .updateOne({ userId: studentUserId }, { $set: aiHubUser }, { upsert: true });
+
+  return {
+    userId: studentUserId,
+    temporaryPasscode,
+  };
+}
+
+/**
+ * Allow user to change their AI Hub passcode
+ */
+export async function changeAIHubPasscodeSecure(
+  userId: string,
+  oldPasscode: string,
+  newPasscode: string,
+): Promise<void> {
+  // Verify old passcode
+  const verified = await verifyAIHubPasscode(userId, oldPasscode);
+  if (!verified) {
+    throw new Error("Current passcode is incorrect");
+  }
+
+  // Validate new passcode
+  if (newPasscode.length < 6) {
+    throw new Error("New passcode must be at least 6 characters");
+  }
+
+  if (oldPasscode === newPasscode) {
+    throw new Error("New passcode must be different from current one");
+  }
+
+  // Update passcode
+  const db = await connectToDatabase();
+  const hashedPasscode = await bcrypt.hash(newPasscode, 12);
+
+  await db
+    .collection<AIHubUser>("aihub_users")
+    .updateOne(
+      { userId },
+      {
+        $set: {
+          passcodeHash: hashedPasscode,
+          updatedAt: new Date(),
+        },
+      },
+    );
+
 }
 
 // ============================================================================
@@ -295,7 +457,7 @@ export async function updateTopicProgress(
             difficulty: nextDifficulty,
             strongAreas: [],
             weakAreas: [],
-          },
+          } as any,
         },
         $inc: {
           overallAttempts: 1,

@@ -66,10 +66,16 @@ export function AIHubAccess() {
     setError("");
 
     try {
-      const data = await verifyAIHubPasscodeFn({ data: { passcode } });
+      const trimmedPasscode = passcode.trim();
+      const data = await verifyAIHubPasscodeFn({ data: { passcode: trimmedPasscode } });
 
       if (data.error) {
         setError(data.error || "Invalid passcode");
+        return;
+      }
+
+      if (!data.token) {
+        setError("Passcode verified, but no access token was returned");
         return;
       }
 
@@ -103,8 +109,8 @@ export function AIHubAccess() {
         </Alert>
 
         <div className="space-y-4">
-          <h3 className="text-2xl font-bold text-center text-gray-900 mb-6">
-            ✨ Sorry But currently it has limits 
+          <h3 className="text-2xl font-bold text-center text-foreground mb-6">
+            ✨ Sorry But currently it has limits so if you want access contact developer on UP lt group 
           </h3>
 
           {/* Feature Cards */}

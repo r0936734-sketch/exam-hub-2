@@ -55,7 +55,12 @@ export const loginStudentServerFn = createServerFn({ method: "POST" })
     const db = await connectToDatabase();
     const user = await findStudentByUserIdOrName(db, identifier);
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      throw new Error("Invalid name/user ID or password");
+    }
+
+    // Compare plaintext password
+    if (password !== user.password) {
       throw new Error("Invalid name/user ID or password");
     }
 

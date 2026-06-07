@@ -10,8 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Copy, RefreshCw, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Copy, RefreshCw, Upload, AlertCircle, CheckCircle2, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { LoadingAnimation } from "@/components/LoadingAnimation";
 import {
   generateQuestionFn,
   getCategorizedTopicsFn,
@@ -334,6 +335,22 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           </Alert>
         )}
 
+        {loading && (
+          <div className="mb-4">
+            <LoadingAnimation
+              isVisible={loading}
+              messages={[
+                "Analyzing topic complexity and difficulty level...",
+                "Generating question from AI model...",
+                "Reviewing question quality and standards...",
+                "Finalizing question with proper formatting...",
+              ]}
+              variant="processing"
+              interval={2500}
+            />
+          </div>
+        )}
+
         <Button
           onClick={handleGenerateQuestion}
           disabled={loading || !selectedTopic.trim()}
@@ -480,6 +497,23 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                   <AlertCircle className="w-4 h-4" />
                   <AlertDescription className="text-red-800 dark:text-red-300">{evaluationError}</AlertDescription>
                 </Alert>
+              )}
+
+              {evaluating && (
+                <div className="mb-4">
+                  <LoadingAnimation
+                    isVisible={evaluating}
+                    messages={[
+                      "Extracting and analyzing answer from image...",
+                      "Comparing with question requirements...",
+                      "Checking factual accuracy and relevance...",
+                      "Evaluating writing quality and presentation...",
+                      "Calculating final marks and feedback...",
+                    ]}
+                    variant="processing"
+                    interval={2000}
+                  />
+                </div>
               )}
 
               <Button
