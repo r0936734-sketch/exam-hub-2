@@ -5,6 +5,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Upload, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { evaluateAnswerFn } from "@/services/aihub.server";
+import { LoadingAnimation } from "@/components/LoadingAnimation";
+import { FormattedAIText } from "@/components/AIHub/formatted-ai-text";
 
 interface AnswerEvaluatorProps {
   subject: string;
@@ -192,6 +194,21 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
             </Alert>
           )}
 
+          {loading && (
+            <LoadingAnimation
+              isVisible={loading}
+              messages={[
+                "Reading your answer image and extracting the important parts...",
+                "This can take around 2 minutes. Take a quick water break.",
+                "Comparing your answer with the question and marking scheme...",
+                "Checking missing concepts, incorrect logic, and exam presentation...",
+                "Preparing clear feedback and a formatted model answer...",
+              ]}
+              variant="processing"
+              interval={3500}
+            />
+          )}
+
           <Button
             onClick={handleEvaluate}
             disabled={loading || !imageFile || !questionText.trim()}
@@ -235,7 +252,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                   <ul className="list-disc list-inside space-y-1">
                     {evaluation.feedback.missingConcepts.map((concept: string, i: number) => (
                       <li key={i} className="text-gray-700">
-                        {concept}
+                        <FormattedAIText inline>{concept}</FormattedAIText>
                       </li>
                     ))}
                   </ul>
@@ -248,7 +265,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                   <ul className="list-disc list-inside space-y-1">
                     {evaluation.feedback.incorrectStatements.map((stmt: string, i: number) => (
                       <li key={i} className="text-gray-700">
-                        {stmt}
+                        <FormattedAIText inline>{stmt}</FormattedAIText>
                       </li>
                     ))}
                   </ul>
@@ -261,7 +278,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                   <ul className="list-disc list-inside space-y-1">
                     {evaluation.feedback.areasToImprove.map((area: string, i: number) => (
                       <li key={i} className="text-gray-700">
-                        {area}
+                        <FormattedAIText inline>{area}</FormattedAIText>
                       </li>
                     ))}
                   </ul>
@@ -275,7 +292,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                     {evaluation.feedback.examWritingSuggestions.map(
                       (suggestion: string, i: number) => (
                         <li key={i} className="text-gray-700">
-                          {suggestion}
+                          <FormattedAIText inline>{suggestion}</FormattedAIText>
                         </li>
                       ),
                     )}
@@ -289,9 +306,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
           <Card className="p-6 border-blue-200 bg-blue-50">
             <h3 className="font-bold text-lg mb-3 text-blue-900">Model Answer (Reference)</h3>
             <div className="bg-white rounded p-4 border border-blue-200">
-              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                {evaluation.modelAnswer}
-              </p>
+              <FormattedAIText className="text-gray-800">{evaluation.modelAnswer}</FormattedAIText>
             </div>
           </Card>
 

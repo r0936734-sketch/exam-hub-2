@@ -20,6 +20,7 @@ import {
   generateQuestion,
   evaluateAnswerFromImage,
   isGeminiQuotaError,
+  isGeminiUnavailableError,
 } from "@/server/gemini.server";
 import { getCurrentSessionServerFn } from "@/services/auth.functions";
 
@@ -202,6 +203,12 @@ export const generateQuestionFn = createServerFn({
       if (isGeminiQuotaError(error)) {
         return { error: "Daily AI quota reached. Please try again tomorrow." };
       }
+      if (isGeminiUnavailableError(error)) {
+        return {
+          error:
+            "The AI model is currently busy due to high demand. Please try again in a few seconds.",
+        };
+      }
       return { error: "Failed to generate question" };
     }
   });
@@ -273,6 +280,12 @@ export const evaluateAnswerFn = createServerFn({
       console.error("Answer evaluation error:", error);
       if (isGeminiQuotaError(error)) {
         return { error: "Daily AI quota reached. Please try again tomorrow." };
+      }
+      if (isGeminiUnavailableError(error)) {
+        return {
+          error:
+            "The AI model is currently busy due to high demand. Please try again in a few seconds.",
+        };
       }
       return { error: "Failed to evaluate answer" };
     }

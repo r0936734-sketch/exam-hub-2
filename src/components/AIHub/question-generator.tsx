@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +9,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Copy, RefreshCw, Upload, AlertCircle, CheckCircle2, Zap } from "lucide-react";
+import {
+  Loader2,
+  Copy,
+  RefreshCw,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+  Zap,
+  XCircle,
+  AlertTriangle,
+  Lightbulb,
+  FileText,
+  BookOpen,
+} from "lucide-react";
 import { toast } from "sonner";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
+import { FormattedAIText } from "@/components/AIHub/formatted-ai-text";
 import {
   generateQuestionFn,
   getCategorizedTopicsFn,
@@ -340,10 +353,10 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             <LoadingAnimation
               isVisible={loading}
               messages={[
-                "Analyzing topic complexity and difficulty level...",
-                "Generating question from AI model...",
-                "Reviewing question quality and standards...",
-                "Finalizing question with proper formatting...",
+                "Reading the selected topic and marks...",
+                "Building an exam-style question with the right difficulty...",
+                "Checking syllabus fit and wording clarity...",
+                "Adding clean formatting so it is easy to copy and answer...",
               ]}
               variant="processing"
               interval={2500}
@@ -395,22 +408,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           </div>
 
           <div className="bg-white rounded p-4 border border-blue-200 dark:bg-slate-800 dark:border-blue-700">
-            <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100">
-              <ReactMarkdown
-                components={{
-                  p: ({ node, ...props }) => <p className="leading-relaxed mb-3" {...props} />,
-                  strong: ({ node, ...props }) => <strong className="font-bold text-gray-900 dark:text-gray-50" {...props} />,
-                  em: ({ node, ...props }) => <em className="italic" {...props} />,
-                  ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-3 space-y-1" {...props} />,
-                  ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-3 space-y-1" {...props} />,
-                  li: ({ node, ...props }) => <li className="text-gray-700 dark:text-gray-300" {...props} />,
-                  code: ({ node, ...props }) => <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-900 dark:text-gray-100 font-mono" {...props} />,
-                  pre: ({ node, ...props }) => <pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded overflow-x-auto mb-3" {...props} />,
-                }}
-              >
-                {question.text}
-              </ReactMarkdown>
-            </div>
+            <FormattedAIText className="prose max-w-none text-gray-800 dark:prose-invert dark:text-gray-100">
+              {question.text}
+            </FormattedAIText>
           </div>
 
           <div className="mt-4 p-4 bg-white dark:bg-slate-700 rounded border border-blue-200 dark:border-blue-700">
@@ -504,14 +504,15 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                   <LoadingAnimation
                     isVisible={evaluating}
                     messages={[
-                      "Extracting and analyzing answer from image...",
-                      "Comparing with question requirements...",
-                      "Checking factual accuracy and relevance...",
-                      "Evaluating writing quality and presentation...",
-                      "Calculating final marks and feedback...",
+                      "Reading your handwritten answer from the image...",
+                      "Evaluation can take around 2 minutes. Take a quick water break.",
+                      "Comparing your work with the exact question requirements...",
+                      "Checking concepts, calculations, diagrams, and logic step by step...",
+                      "Looking for missing points and incorrect statements...",
+                      "Writing useful feedback and a properly formatted model answer...",
                     ]}
                     variant="processing"
-                    interval={2000}
+                    interval={3500}
                   />
                 </div>
               )}
@@ -559,14 +560,15 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                 <div className="bg-white dark:bg-slate-700 rounded-lg p-4 space-y-3">
                   {evaluation.feedback.missingConcepts?.length > 0 && (
                     <div>
-                      <p className="font-semibold text-red-600 dark:text-red-400 text-sm mb-2">
-                        ❌ Missing Concepts:
+                      <p className="flex items-center gap-2 font-semibold text-red-600 dark:text-red-400 text-sm mb-2">
+                        <XCircle className="h-4 w-4" />
+                        Missing Concepts
                       </p>
                       <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.missingConcepts.map((concept: string, idx: number) => (
                           <li key={idx} className="flex items-start">
-                            <span className="mr-2">•</span>
-                            <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{concept}</ReactMarkdown></span>
+                            <span className="mr-2">-</span>
+                            <FormattedAIText inline>{concept}</FormattedAIText>
                           </li>
                         ))}
                       </ul>
@@ -575,15 +577,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
                   {evaluation.feedback.incorrectStatements?.length > 0 && (
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <p className="font-semibold text-orange-600 dark:text-orange-400 text-sm mb-2">
-                        ⚠️ Incorrect Statements:
+                      <p className="flex items-center gap-2 font-semibold text-orange-600 dark:text-orange-400 text-sm mb-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Incorrect Statements
                       </p>
                       <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.incorrectStatements.map(
                           (stmt: string, idx: number) => (
                             <li key={idx} className="flex items-start">
-                              <span className="mr-2">•</span>
-                              <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{stmt}</ReactMarkdown></span>
+                              <span className="mr-2">-</span>
+                              <FormattedAIText inline>{stmt}</FormattedAIText>
                             </li>
                           ),
                         )}
@@ -593,14 +596,15 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
                   {evaluation.feedback.areasToImprove?.length > 0 && (
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <p className="font-semibold text-blue-600 dark:text-blue-400 text-sm mb-2">
-                        💡 Areas to Improve:
+                      <p className="flex items-center gap-2 font-semibold text-blue-600 dark:text-blue-400 text-sm mb-2">
+                        <Lightbulb className="h-4 w-4" />
+                        Areas to Improve
                       </p>
                       <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.areasToImprove.map((area: string, idx: number) => (
                           <li key={idx} className="flex items-start">
-                            <span className="mr-2">•</span>
-                            <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{area}</ReactMarkdown></span>
+                            <span className="mr-2">-</span>
+                            <FormattedAIText inline>{area}</FormattedAIText>
                           </li>
                         ))}
                       </ul>
@@ -609,15 +613,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
                   {evaluation.feedback.examWritingSuggestions?.length > 0 && (
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <p className="font-semibold text-purple-600 dark:text-purple-400 text-sm mb-2">
-                        📝 Exam Writing Tips:
+                      <p className="flex items-center gap-2 font-semibold text-purple-600 dark:text-purple-400 text-sm mb-2">
+                        <FileText className="h-4 w-4" />
+                        Exam Writing Tips
                       </p>
                       <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                         {evaluation.feedback.examWritingSuggestions.map(
                           (tip: string, idx: number) => (
                             <li key={idx} className="flex items-start">
-                              <span className="mr-2">•</span>
-                              <span><ReactMarkdown components={{ p: ({node, ...props}) => <span {...props} /> }}>{tip}</ReactMarkdown></span>
+                              <span className="mr-2">-</span>
+                              <FormattedAIText inline>{tip}</FormattedAIText>
                             </li>
                           ),
                         )}
@@ -629,55 +634,14 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
               {evaluation.modelAnswer && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-600 dark:border-blue-500">
-                  <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">📚 Model Answer:</p>
+                  <p className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                    <BookOpen className="h-4 w-4" />
+                    Model Answer
+                  </p>
                   <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm max-w-none dark:prose-invert">
-                    <ReactMarkdown
-                      components={{
-                        p: ({ node, ...props }: any) => <p className="mb-2" {...props} />,
-                        strong: ({ node, ...props }: any) => (
-                          <strong className="font-bold text-gray-900 dark:text-gray-100" {...props} />
-                        ),
-                        em: ({ node, ...props }: any) => (
-                          <em className="italic text-gray-800 dark:text-gray-200" {...props} />
-                        ),
-                        ul: ({ node, ...props }: any) => (
-                          <ul className="list-disc list-inside mb-2 ml-2" {...props} />
-                        ),
-                        ol: ({ node, ...props }: any) => (
-                          <ol className="list-decimal list-inside mb-2 ml-2" {...props} />
-                        ),
-                        li: ({ node, ...props }: any) => <li className="mb-1" {...props} />,
-                        code: ({ node, ...props }: any) => (
-                          <code
-                            className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs font-mono text-gray-900 dark:text-gray-100"
-                            {...props}
-                          />
-                        ),
-                        pre: ({ node, ...props }: any) => (
-                          <pre
-                            className="bg-gray-100 dark:bg-gray-800 p-3 rounded mb-2 overflow-x-auto text-gray-900 dark:text-gray-100"
-                            {...props}
-                          />
-                        ),
-                        blockquote: ({ node, ...props }: any) => (
-                          <blockquote
-                            className="border-l-4 border-blue-400 dark:border-blue-500 pl-3 italic text-gray-700 dark:text-gray-300 mb-2"
-                            {...props}
-                          />
-                        ),
-                        h1: ({ node, ...props }: any) => (
-                          <h1 className="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100" {...props} />
-                        ),
-                        h2: ({ node, ...props }: any) => (
-                          <h2 className="text-base font-bold mb-2 text-gray-900 dark:text-gray-100" {...props} />
-                        ),
-                        h3: ({ node, ...props }: any) => (
-                          <h3 className="text-sm font-bold mb-2 text-gray-900 dark:text-gray-100" {...props} />
-                        ),
-                      }}
-                    >
+                    <FormattedAIText>
                       {evaluation.modelAnswer}
-                    </ReactMarkdown>
+                    </FormattedAIText>
                   </div>
                 </div>
               )}

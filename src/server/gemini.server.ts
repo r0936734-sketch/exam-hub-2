@@ -263,6 +263,20 @@ export function isGeminiQuotaError(error: unknown): boolean {
   );
 }
 
+export function isGeminiUnavailableError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { status?: number; statusCode?: number; message?: string };
+  const message = e.message?.toLowerCase() ?? "";
+
+  return (
+    e.status === 503 ||
+    e.statusCode === 503 ||
+    message.includes("503") ||
+    message.includes("unavailable") ||
+    message.includes("high demand")
+  );
+}
+
 async function imageUrlToInlineData(imageUrl: string) {
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error(`Failed to fetch answer image: ${response.status}`);
