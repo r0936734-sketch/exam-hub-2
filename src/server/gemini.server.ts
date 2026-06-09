@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import {
   QUESTION_GENERATION_MESSAGES,
   ANSWER_EVALUATION_MESSAGES,
@@ -16,6 +16,184 @@ if (!GEMINI_API_KEY) {
 const ai = new GoogleGenAI({
   apiKey: GEMINI_API_KEY,
 });
+
+type GenerateContentParams = Parameters<typeof ai.models.generateContentStream>[0];
+
+const GEMINI_STREAM_TIMEOUT_MS = 45_000;
+
+const highThinkingSearchConfig = {
+  thinkingConfig: {
+    thinkingLevel: ThinkingLevel.HIGH,
+  },
+  tools: [
+    {
+      googleSearch: {},
+    },
+  ],
+};
+
+const minimalThinkingSearchConfig = {
+  thinkingConfig: {
+    thinkingLevel: ThinkingLevel.MINIMAL,
+  },
+  tools: [
+    {
+      googleSearch: {},
+    },
+  ],
+};
+
+const QUESTION_GENERATION_MODELS = [
+  {
+    name: "gemma-4-31b-it",
+  },
+  {
+    name: "gemma-4-26b-a4b-it",
+    config: highThinkingSearchConfig,
+  },
+];
+
+const ANSWER_EVALUATION_MODELS = [
+  {
+    name: "gemma-3-27b-it",
+  },
+  {
+    name: "gemma-4-26b-a4b-it",
+    config: highThinkingSearchConfig,
+  },
+  
+];
+
+const IMAGE_EVALUATION_MODELS = [
+  {
+    name: "gemma-4-31b-it",
+  },
+  {
+    name: "gemma-4-26b-a4b-it",
+    config: highThinkingSearchConfig,
+  },
+  
+];
+
+function isGeminiFallbackError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { status?: number; statusCode?: number; message?: string };
+  const message = e.message?.toLowerCase() ?? "";
+
+  return (
+    e.status === 429 ||
+    e.statusCode === 429 ||
+    e.status === 503 ||
+    e.statusCode === 503 ||
+    message.includes("429") ||
+    message.includes("503") ||
+    message.includes("quota") ||
+    message.includes("busy") ||
+    message.includes("overloaded") ||
+    message.includes("unavailable") ||
+    message.includes("high demand") ||
+    message.includes("timed out") ||
+    message.includes("timeout")
+  );
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function streamGeminiTextWithFallback({
+  models,
+  contents,
+  operationLabel,
+  fallbackMessage,
+  onText,
+  onProgressChunk,
+  onFallback,
+}: {
+  models: Array<{ name: string; config?: GenerateContentParams["config"] }>;
+  contents: GenerateContentParams["contents"];
+  operationLabel: string;
+  fallbackMessage?: string;
+  onText?: (text: string) => void;
+  onProgressChunk?: () => void;
+  onFallback?: (message: string) => void;
+}): Promise<string> {
+  let lastError: unknown;
+
+  // Try models one at a time. A fallback is only called after the current model fails.
+  for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+    const model = models[modelIndex];
+    let iterator: AsyncGenerator<{ text?: string }> | undefined;
+
+    try {
+      let attemptText = "";
+      const response = await withTimeout(
+        ai.models.generateContentStream({
+          model: model.name,
+          config: model.config,
+          contents,
+        }),
+        GEMINI_STREAM_TIMEOUT_MS,
+        `${operationLabel} timed out while starting ${model.name}`,
+      );
+
+      iterator = response as AsyncGenerator<{ text?: string }>;
+
+      while (true) {
+        const chunk = await withTimeout(
+          iterator.next(),
+          GEMINI_STREAM_TIMEOUT_MS,
+          `${operationLabel} timed out while streaming from ${model.name}`,
+        );
+
+        if (chunk.done) break;
+        if (chunk.value.text) {
+          attemptText += chunk.value.text;
+          onText?.(chunk.value.text);
+          onProgressChunk?.();
+        }
+      }
+
+      return attemptText;
+    } catch (error) {
+      lastError = error;
+      console.warn(`[Gemini] ${operationLabel} failed with ${model.name}`, error);
+
+      try {
+        await iterator?.return?.(undefined);
+      } catch {
+        // Best-effort stream cleanup after timeout/failure.
+      }
+
+      const hasFallbackModel = modelIndex < models.length - 1;
+      if (!hasFallbackModel || !isGeminiFallbackError(error)) {
+        throw error;
+      }
+
+      if (fallbackMessage) {
+        onFallback?.(fallbackMessage);
+        console.info(`[Gemini] ${fallbackMessage}`);
+      }
+    }
+  }
+
+  throw lastError;
+}
 
 
 interface QuestionGenerationContext {
@@ -107,7 +285,6 @@ export async function generateQuestion(
   customPrompt?: string,
   onProgress?: (message: string) => void,
 ): Promise<{ question: string; type: "theory" | "numerical" }> {
-  const model = "gemma-4-31b-it";
   let messageIndex = 0;
 
   // Get numerical seed data for this topic
@@ -207,17 +384,19 @@ No numbering. No marks label. No explanation. No model answer.`;
   ];
 
   let questionText = "";
-  const response = await ai.models.generateContentStream({ model, contents });
-
   let chunkCount = 0;
-  for await (const chunk of response) {
-    if (chunk.text) {
-      questionText += chunk.text;
+  questionText = await streamGeminiTextWithFallback({
+    models: QUESTION_GENERATION_MODELS,
+    contents,
+    operationLabel: "Question generation",
+    fallbackMessage: "Gemma 31B is busy or quota-limited. Switching to Gemma 26B...",
+    onProgressChunk: () => {
       if (chunkCount++ % 3 === 0) {
         onProgress?.(getLoadingMessage(QUESTION_GENERATION_MESSAGES, messageIndex++));
       }
-    }
-  }
+    },
+    onFallback: (message) => onProgress?.(message),
+  });
 
   questionText = questionText.trim();
 
@@ -298,7 +477,6 @@ export async function evaluateAnswer(
   marks: number,
   onProgress?: (message: string) => void,
 ): Promise<{ evaluation: EvaluationFeedback; modelAnswer: string }> {
-  const model = "gemma-3-27b-it";
   let messageIndex = 0;
 
   const wordLimit = marks <= 8 ? 130 : 220;
@@ -338,18 +516,18 @@ Respond in EXACTLY this format — no extra text:
 
 SCORE: X/${marks}
 MISSING:
-• [missing concept or step]
-• [missing concept or step]
+- [missing concept or step]
+- [missing concept or step]
 INCORRECT:
-• [incorrect claim or wrong calculation step]
+- [incorrect claim or wrong calculation step]
 IMPROVE:
-• [specific improvement suggestion]
+- [specific improvement suggestion]
 SUGGESTIONS:
-• [exam writing tip]
+- [exam writing tip]
 
 Rules:
-- Use bullet points starting with •
-- If a section has nothing to report, write: • None
+- Use bullet points starting with -
+- If a section has nothing to report, write: - None
 - Score must be a number like 6.5 or 8 — not a range
 - Be specific, not generic (e.g. "Did not explain deadlock detection" not "Answer is incomplete")`;
 
@@ -357,35 +535,35 @@ Rules:
 
   // Generate model answer
   let modelAnswer = "";
-  const modelResp = await ai.models.generateContentStream({
-    model,
-    contents: [{ role: "user" as const, parts: [{ text: modelAnswerPrompt }] }],
-  });
   let chunkCount = 0;
-  for await (const chunk of modelResp) {
-    if (chunk.text) {
-      modelAnswer += chunk.text;
+  modelAnswer = await streamGeminiTextWithFallback({
+    models: ANSWER_EVALUATION_MODELS,
+    contents: [{ role: "user" as const, parts: [{ text: modelAnswerPrompt }] }],
+    operationLabel: "Model answer generation",
+    fallbackMessage: "The answer model is busy. Switching to a fallback model...",
+    onProgressChunk: () => {
       if (chunkCount++ % 3 === 0)
         onProgress?.(getLoadingMessage(ANSWER_EVALUATION_MESSAGES, messageIndex++));
-    }
-  }
+    },
+    onFallback: (message) => onProgress?.(message),
+  });
   modelAnswer = modelAnswer.trim();
 
   // Evaluate student answer
   onProgress?.(getLoadingMessage(ANSWER_EVALUATION_MESSAGES, messageIndex++));
   let evaluationText = "";
-  const evalResp = await ai.models.generateContentStream({
-    model,
-    contents: [{ role: "user" as const, parts: [{ text: evaluationPrompt }] }],
-  });
   chunkCount = 0;
-  for await (const chunk of evalResp) {
-    if (chunk.text) {
-      evaluationText += chunk.text;
+  evaluationText = await streamGeminiTextWithFallback({
+    models: ANSWER_EVALUATION_MODELS,
+    contents: [{ role: "user" as const, parts: [{ text: evaluationPrompt }] }],
+    operationLabel: "Answer evaluation",
+    fallbackMessage: "The evaluation model is busy. Switching to a fallback model...",
+    onProgressChunk: () => {
       if (chunkCount++ % 3 === 0)
         onProgress?.(getLoadingMessage(ANSWER_EVALUATION_MESSAGES, messageIndex++));
-    }
-  }
+    },
+    onFallback: (message) => onProgress?.(message),
+  });
   evaluationText = evaluationText.trim();
 
   onProgress?.(getLoadingMessage(ANSWER_EVALUATION_MESSAGES, messageIndex + 1));
@@ -405,7 +583,6 @@ export async function evaluateAnswerFromImage(
   marks: number,
   onProgress?: (message: string) => void,
 ): Promise<{ evaluation: EvaluationFeedback; modelAnswer: string; ocrText: string }> {
-  const model = "gemma-4-31b-it";
   const wordLimit = marks <= 8 ? 130 : 220;
   let messageIndex = 0;
 
@@ -426,18 +603,18 @@ OCR_TEXT:
 [write the extracted handwritten text here verbatim; mark unclear parts as [unclear]]
 SCORE: X/${marks}
 MISSING:
-• [missing concept or step]
+- [missing concept or step]
 INCORRECT:
-• [wrong statement or calculation error]
+- [wrong statement or calculation error]
 IMPROVE:
-• [specific improvement suggestion]
+- [specific improvement suggestion]
 SUGGESTIONS:
-• [exam writing tip]
+- [exam writing tip]
 MODEL_ANSWER:
 [complete model answer here — max ${wordLimit} words; for numerical questions show all working steps]
 
 Rules:
-- Each bullet section: if nothing to report, write • None
+- Each bullet section: if nothing to report, write - None
 - Score must be a single number like 7 or 9.5
 - Be specific in feedback (name the exact missing concept or wrong step)
 - Model answer must be exam-ready and high-scoring`;
@@ -453,11 +630,13 @@ Rules:
   ];
 
   let responseText = "";
-  const response = await ai.models.generateContentStream({ model, contents });
   let chunkCount = 0;
-  for await (const chunk of response) {
-    if (chunk.text) {
-      responseText += chunk.text;
+  responseText = await streamGeminiTextWithFallback({
+    models: IMAGE_EVALUATION_MODELS,
+    contents,
+    operationLabel: "Image answer evaluation",
+    fallbackMessage: "The image evaluation model is busy. Switching to a fallback model...",
+    onProgressChunk: () => {
       if (chunkCount++ % 2 === 0)
         onProgress?.(
           getLoadingMessage(
@@ -465,8 +644,9 @@ Rules:
             messageIndex++,
           ),
         );
-    }
-  }
+    },
+    onFallback: (message) => onProgress?.(message),
+  });
   responseText = responseText.trim();
 
   onProgress?.(getLoadingMessage(IMAGE_OCR_MESSAGES, messageIndex + 1));
@@ -503,8 +683,8 @@ function extractBullets(text: string): string[] {
   return text
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.startsWith("•") || line.startsWith("-") || line.startsWith("*"))
-    .map((line) => line.replace(/^[•\-\*]\s*/, "").trim())
+    .filter((line) => /^(?:â€¢|•|-|\*)\s*/.test(line))
+    .map((line) => line.replace(/^(?:â€¢|•|-|\*)\s*/, "").trim())
     .filter((line) => line.length > 0 && line.toLowerCase() !== "none");
 }
 
@@ -526,8 +706,6 @@ export async function extractTextFromImage(
   imageUrl: string,
   onProgress?: (message: string) => void,
 ): Promise<string> {
-  const model = "gemma-3-27b-it";
-
   const prompt = `Extract all handwritten text from this exam answer image exactly as written.
 Preserve the structure, line breaks, and formatting.
 For any unclear or illegible word, write [unclear] in its place.
@@ -544,10 +722,13 @@ Return ONLY the extracted text. No commentary.`;
   ];
 
   let result = "";
-  const response = await ai.models.generateContentStream({ model, contents });
-  for await (const chunk of response) {
-    if (chunk.text) result += chunk.text;
-  }
+  result = await streamGeminiTextWithFallback({
+    models: IMAGE_EVALUATION_MODELS,
+    contents,
+    operationLabel: "Image OCR",
+    fallbackMessage: "The OCR model is busy. Switching to a fallback model...",
+    onFallback: (message) => onProgress?.(message),
+  });
 
   onProgress?.(getLoadingMessage(IMAGE_OCR_MESSAGES, 2));
   return result.trim();

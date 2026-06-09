@@ -62,6 +62,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const [evaluationMode, setEvaluationMode] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [evaluationQuestionText, setEvaluationQuestionText] = useState("");
   const [evaluating, setEvaluating] = useState(false);
   const [evaluationError, setEvaluationError] = useState("");
   const [evaluation, setEvaluation] = useState<any | null>(null);
@@ -83,6 +84,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               text: pending.questionText,
               type: pending.questionType,
             });
+            setEvaluationQuestionText(pending.questionText);
             setMarks(pending.marks as 8 | 12);
             setSelectedTopic(pending.topic);
 
@@ -115,6 +117,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
     setError("");
     setEvaluation(null);
     setEvaluationMode(false);
+    setEvaluationQuestionText("");
     setImageFile(null);
     setImagePreview("");
     setEvaluationError("");
@@ -139,6 +142,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
         text: data.question,
         type: data.type,
       });
+      setEvaluationQuestionText(data.question);
       setError("");
     } catch (err) {
       setError("Failed to generate question. Please try again.");
@@ -189,8 +193,10 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   };
 
   const handleEvaluateAnswer = async () => {
-    if (!imageFile || !question) {
-      setEvaluationError("Please upload an image and generate a question first");
+    const questionForEvaluation = evaluationQuestionText.trim();
+
+    if (!imageFile || !questionForEvaluation) {
+      setEvaluationError("Please upload an image and provide the question to evaluate against");
       return;
     }
 
@@ -206,9 +212,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           const data = await evaluateAnswerFn({
             data: {
               imageUrl,
-              questionText: question.text,
+              questionText: questionForEvaluation,
               marks,
-              topic: selectedTopic.trim(),
+              topic: selectedTopic.trim() || "Custom evaluation",
               subject,
             },
           });
@@ -426,239 +432,255 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
       )}
 
       {/* Answer Evaluation Section */}
-      {question && (
-        <Card className="p-6 border-green-200 bg-green-50 dark:bg-slate-800 dark:border-green-900">
-          <div className="mb-6">
-            <h3 className="text-xl font-bold mb-2 dark:text-white">Upload Your Answer</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Write your answer to the question above. Take a clear photo and upload it below for
-              instant evaluation.
-            </p>
-            {/* Question Reference */}
-            <div className="p-3 bg-white dark:bg-slate-700 rounded border-l-4 border-blue-500 dark:border-blue-600 mb-4">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
-                Question Being Evaluated:
-              </p>
-              <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{question.text}</p>
-            </div>
-          </div>
+      <Card className="p-6 border-green-200 bg-green-50 dark:bg-slate-800 dark:border-green-900">
+        <div className="mb-6">
+          <h3 className="text-xl font-bold mb-2 dark:text-white">Evaluate Your Answer</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Use the generated question, or paste any outside question and upload your answer image.
+          </p>
 
-          {/* Show upload form only when no evaluation results */}
-          {!evaluation && (
-            <div className="space-y-4">
-              {/* Image Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Answer Image</label>
-                <div className="border-2 border-dashed border-green-400 dark:border-green-600 rounded-lg p-8 text-center hover:border-green-500 dark:hover:border-green-500 hover:bg-green-100 dark:hover:bg-green-900/20 transition">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/jpg"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    id="image-upload"
-                    disabled={evaluating}
-                  />
-                  <label htmlFor="image-upload" className="cursor-pointer block">
-                    <svg
-                      className="mx-auto h-12 w-12 text-green-600 dark:text-green-500 mb-2"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20a4 4 0 004 4h24a4 4 0 004-4V20m-8-12l-4-4m0 0l-4 4m4-4v12"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-sm text-gray-500">JPG, PNG up to 10MB</p>
-                  </label>
-                </div>
-              </div>
-
-              {/* Image Preview */}
-              {imagePreview && (
-                <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Your Answer Preview:</p>
-                  <img
-                    src={imagePreview}
-                    alt="Answer preview"
-                    className="max-h-80 w-full object-contain rounded border border-gray-200"
-                  />
-                </div>
-              )}
-
-              {evaluationError && (
-                <Alert className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30">
-                  <AlertCircle className="w-4 h-4" />
-                  <AlertDescription className="text-red-800 dark:text-red-300">{evaluationError}</AlertDescription>
-                </Alert>
-              )}
-
-              {evaluating && (
-                <div className="mb-4">
-                  <LoadingAnimation
-                    isVisible={evaluating}
-                    messages={[
-                      "Reading your handwritten answer from the image...",
-                      "Evaluation can take around 2 minutes. Take a quick water break.",
-                      "Comparing your work with the exact question requirements...",
-                      "Checking concepts, calculations, diagrams, and logic step by step...",
-                      "Looking for missing points and incorrect statements...",
-                      "Writing useful feedback and a properly formatted model answer...",
-                    ]}
-                    variant="processing"
-                    interval={3500}
-                  />
-                </div>
-              )}
-
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Question Being Evaluated
+            </label>
+            <textarea
+              value={evaluationQuestionText}
+              onChange={(e) => {
+                setEvaluationQuestionText(e.target.value);
+                setEvaluation(null);
+                setEvaluationError("");
+              }}
+              placeholder="Paste the question here, or generate one above to fill this automatically..."
+              className="min-h-28 w-full rounded-md border border-green-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 dark:border-green-700 dark:bg-slate-700 dark:text-white dark:focus:ring-green-900"
+              disabled={evaluating}
+            />
+            {question && evaluationQuestionText !== question.text && (
               <Button
-                onClick={handleEvaluateAnswer}
-                disabled={evaluating || !imageFile}
-                className="w-full bg-green-600 hover:bg-green-700"
-                size="lg"
-              >
-                {evaluating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Evaluating Your Answer Against This Question...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Evaluate Answer (Auto-Checking Against Question)
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* Evaluation Results */}
-          {evaluation && (
-            <div className="mt-6 space-y-4 border-t border-green-200 dark:border-green-900 pt-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white dark:bg-slate-700 rounded-lg p-4 border-l-4 border-green-600">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Your Score</p>
-                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                    {evaluation.score}/{marks}
-                  </p>
-                </div>
-                <div className="bg-white dark:bg-slate-700 rounded-lg p-4 border-l-4 border-blue-600">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Percentage</p>
-                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                    {Math.round((evaluation.score / marks) * 100)}%
-                  </p>
-                </div>
-              </div>
-
-              {evaluation.feedback && (
-                <div className="bg-white dark:bg-slate-700 rounded-lg p-4 space-y-3">
-                  {evaluation.feedback.missingConcepts?.length > 0 && (
-                    <div>
-                      <p className="flex items-center gap-2 font-semibold text-red-600 dark:text-red-400 text-sm mb-2">
-                        <XCircle className="h-4 w-4" />
-                        Missing Concepts
-                      </p>
-                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                        {evaluation.feedback.missingConcepts.map((concept: string, idx: number) => (
-                          <li key={idx} className="flex items-start">
-                            <span className="mr-2">-</span>
-                            <FormattedAIText inline>{concept}</FormattedAIText>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {evaluation.feedback.incorrectStatements?.length > 0 && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <p className="flex items-center gap-2 font-semibold text-orange-600 dark:text-orange-400 text-sm mb-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        Incorrect Statements
-                      </p>
-                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                        {evaluation.feedback.incorrectStatements.map(
-                          (stmt: string, idx: number) => (
-                            <li key={idx} className="flex items-start">
-                              <span className="mr-2">-</span>
-                              <FormattedAIText inline>{stmt}</FormattedAIText>
-                            </li>
-                          ),
-                        )}
-                      </ul>
-                    </div>
-                  )}
-
-                  {evaluation.feedback.areasToImprove?.length > 0 && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <p className="flex items-center gap-2 font-semibold text-blue-600 dark:text-blue-400 text-sm mb-2">
-                        <Lightbulb className="h-4 w-4" />
-                        Areas to Improve
-                      </p>
-                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                        {evaluation.feedback.areasToImprove.map((area: string, idx: number) => (
-                          <li key={idx} className="flex items-start">
-                            <span className="mr-2">-</span>
-                            <FormattedAIText inline>{area}</FormattedAIText>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {evaluation.feedback.examWritingSuggestions?.length > 0 && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <p className="flex items-center gap-2 font-semibold text-purple-600 dark:text-purple-400 text-sm mb-2">
-                        <FileText className="h-4 w-4" />
-                        Exam Writing Tips
-                      </p>
-                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                        {evaluation.feedback.examWritingSuggestions.map(
-                          (tip: string, idx: number) => (
-                            <li key={idx} className="flex items-start">
-                              <span className="mr-2">-</span>
-                              <FormattedAIText inline>{tip}</FormattedAIText>
-                            </li>
-                          ),
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {evaluation.modelAnswer && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-600 dark:border-blue-500">
-                  <p className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                    <BookOpen className="h-4 w-4" />
-                    Model Answer
-                  </p>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm max-w-none dark:prose-invert">
-                    <FormattedAIText>
-                      {evaluation.modelAnswer}
-                    </FormattedAIText>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={handleGenerateQuestion}
-                disabled={loading}
-                className="w-full mt-4"
+                type="button"
                 variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEvaluationQuestionText(question.text);
+                  setEvaluation(null);
+                  setEvaluationError("");
+                }}
+                disabled={evaluating}
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Generate Another Question
+                Use Generated Question
               </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Show upload form only when no evaluation results */}
+        {!evaluation && (
+          <div className="space-y-4">
+            {/* Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Answer Image</label>
+              <div className="border-2 border-dashed border-green-400 dark:border-green-600 rounded-lg p-8 text-center hover:border-green-500 dark:hover:border-green-500 hover:bg-green-100 dark:hover:bg-green-900/20 transition">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  id="image-upload"
+                  disabled={evaluating}
+                />
+                <label htmlFor="image-upload" className="cursor-pointer block">
+                  <Upload className="mx-auto h-12 w-12 text-green-600 dark:text-green-500 mb-2" />
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Click to upload or drag and drop
+                  </p>
+                  <p className="text-sm text-gray-500">JPG, PNG up to 10MB</p>
+                </label>
+              </div>
             </div>
-          )}
-        </Card>
-      )}
+
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Your Answer Preview:</p>
+                <img
+                  src={imagePreview}
+                  alt="Answer preview"
+                  className="max-h-80 w-full object-contain rounded border border-gray-200"
+                />
+              </div>
+            )}
+
+            {evaluationError && (
+              <Alert className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30">
+                <AlertCircle className="w-4 h-4" />
+                <AlertDescription className="text-red-800 dark:text-red-300">{evaluationError}</AlertDescription>
+              </Alert>
+            )}
+
+            {evaluating && (
+              <div className="mb-4">
+                <LoadingAnimation
+                  isVisible={evaluating}
+                  messages={[
+                    "Reading your handwritten answer from the image...",
+                    "Evaluation can take around 2 minutes. Take a quick water break.",
+                    "Comparing your work with the exact question requirements...",
+                    "Checking concepts, calculations, diagrams, and logic step by step...",
+                    "Looking for missing points and incorrect statements...",
+                    "Writing useful feedback and a properly formatted model answer...",
+                  ]}
+                  variant="processing"
+                  interval={3500}
+                />
+              </div>
+            )}
+
+            <Button
+              onClick={handleEvaluateAnswer}
+              disabled={evaluating || !imageFile || !evaluationQuestionText.trim()}
+              className="w-full bg-green-600 hover:bg-green-700"
+              size="lg"
+            >
+              {evaluating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Evaluating Your Answer...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Evaluate Answer
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Evaluation Results */}
+        {evaluation && (
+          <div className="mt-6 space-y-4 border-t border-green-200 dark:border-green-900 pt-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-slate-700 rounded-lg p-4 border-l-4 border-green-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Your Score</p>
+                <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {evaluation.score}/{marks}
+                </p>
+              </div>
+              <div className="bg-white dark:bg-slate-700 rounded-lg p-4 border-l-4 border-blue-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Percentage</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {Math.round((evaluation.score / marks) * 100)}%
+                </p>
+              </div>
+            </div>
+
+            {evaluation.feedback && (
+              <div className="bg-white dark:bg-slate-700 rounded-lg p-4 space-y-3">
+                {evaluation.feedback.missingConcepts?.length > 0 && (
+                  <div>
+                    <p className="flex items-center gap-2 font-semibold text-red-600 dark:text-red-400 text-sm mb-2">
+                      <XCircle className="h-4 w-4" />
+                      Missing Concepts
+                    </p>
+                    <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                      {evaluation.feedback.missingConcepts.map((concept: string, idx: number) => (
+                        <li key={idx} className="flex items-start">
+                          <span className="mr-2">-</span>
+                          <FormattedAIText inline>{concept}</FormattedAIText>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {evaluation.feedback.incorrectStatements?.length > 0 && (
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <p className="flex items-center gap-2 font-semibold text-orange-600 dark:text-orange-400 text-sm mb-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Incorrect Statements
+                    </p>
+                    <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                      {evaluation.feedback.incorrectStatements.map(
+                        (stmt: string, idx: number) => (
+                          <li key={idx} className="flex items-start">
+                            <span className="mr-2">-</span>
+                            <FormattedAIText inline>{stmt}</FormattedAIText>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                {evaluation.feedback.areasToImprove?.length > 0 && (
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <p className="flex items-center gap-2 font-semibold text-blue-600 dark:text-blue-400 text-sm mb-2">
+                      <Lightbulb className="h-4 w-4" />
+                      Areas to Improve
+                    </p>
+                    <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                      {evaluation.feedback.areasToImprove.map((area: string, idx: number) => (
+                        <li key={idx} className="flex items-start">
+                          <span className="mr-2">-</span>
+                          <FormattedAIText inline>{area}</FormattedAIText>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {evaluation.feedback.examWritingSuggestions?.length > 0 && (
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <p className="flex items-center gap-2 font-semibold text-purple-600 dark:text-purple-400 text-sm mb-2">
+                      <FileText className="h-4 w-4" />
+                      Exam Writing Tips
+                    </p>
+                    <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                      {evaluation.feedback.examWritingSuggestions.map(
+                        (tip: string, idx: number) => (
+                          <li key={idx} className="flex items-start">
+                            <span className="mr-2">-</span>
+                            <FormattedAIText inline>{tip}</FormattedAIText>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {evaluation.modelAnswer && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border-l-4 border-blue-600 dark:border-blue-500">
+                <p className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                  <BookOpen className="h-4 w-4" />
+                  Model Answer
+                </p>
+                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm max-w-none dark:prose-invert">
+                  <FormattedAIText>
+                    {evaluation.modelAnswer}
+                  </FormattedAIText>
+                </div>
+              </div>
+            )}
+
+            <Button
+              onClick={() => {
+                setEvaluation(null);
+                setImageFile(null);
+                setImagePreview("");
+                setEvaluationError("");
+              }}
+              disabled={evaluating}
+              className="w-full mt-4"
+              variant="outline"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Evaluate Another Answer
+            </Button>
+          </div>
+        )}
+      </Card>
+
     </div>
   );
 }
