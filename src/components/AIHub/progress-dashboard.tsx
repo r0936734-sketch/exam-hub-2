@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, TrendingUp, AlertCircle } from "lucide-react";
@@ -29,6 +29,8 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
   const [evaluationHistory, setEvaluationHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const chartScrollRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef({ active: false, startX: 0, scrollLeft: 0 });
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -61,6 +63,75 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
     fetchProgress();
   }, [subject]);
 
+  // Prepare chart data from evaluation history
+  const chartData = (evaluationHistory || []).map((evaluation: any) => ({
+    date: new Date(evaluation.evaluatedAt).toLocaleDateString(),
+    score: evaluation.score,
+    maxMarks: evaluation.maxMarks,
+    percentage: ((evaluation.score / evaluation.maxMarks) * 100).toFixed(0),
+  }));
+
+  // Get topic performance data
+  const topicPerformance = (progress?.topicProgress || []).map((data: any) => ({
+    topic: data.topic,
+    averageScore: data.averageScore ?? data.lastScore ?? 0,
+    attempts: data.attempts || 0,
+  }));
+  const topicProgressByName = useMemo(
+    () =>
+      new Map<string, TopicProgress>(
+        (progress?.topicProgress || []).map((data: any) => [
+          String(data.topic).toLowerCase(),
+          {
+            topic: data.topic,
+            attempts: data.attempts || 0,
+            averageScore: data.averageScore ?? data.lastScore ?? 0,
+            lastScore: data.lastScore ?? 0,
+            difficulty: data.difficulty,
+            strongAreas: data.strongAreas ?? [],
+            weakAreas: data.weakAreas ?? [],
+          },
+        ]),
+      ),
+    [progress?.topicProgress],
+  );
+  const topicChartWidth = Math.max(760, topicPerformance.length * 76);
+
+  // Calculate stats properly
+  const totalAttempts = progress?.overallAttempts || 0;
+  const topicsCovered = topicPerformance.length;
+  const weakTopicsCount = (progress?.topicProgress || []).filter(
+    (tp: any) => tp.lastScore && (tp.lastScore / 12) * 100 < 50
+  ).length;
+
+  const handleChartPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    const element = chartScrollRef.current;
+    if (!element) return;
+
+    dragStateRef.current = {
+      active: true,
+      startX: event.clientX,
+      scrollLeft: element.scrollLeft,
+    };
+    element.setPointerCapture(event.pointerId);
+  };
+
+  const handleChartPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const element = chartScrollRef.current;
+    if (!element || !dragStateRef.current.active) return;
+
+    const distance = event.clientX - dragStateRef.current.startX;
+    element.scrollLeft = dragStateRef.current.scrollLeft - distance;
+  };
+
+  const stopChartDrag = (event: PointerEvent<HTMLDivElement>) => {
+    const element = chartScrollRef.current;
+    dragStateRef.current.active = false;
+    if (element?.hasPointerCapture(event.pointerId)) {
+      element.releasePointerCapture(event.pointerId);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -77,28 +148,6 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
       </Alert>
     );
   }
-
-  // Prepare chart data from evaluation history
-  const chartData = (evaluationHistory || []).map((evaluation: any) => ({
-    date: new Date(evaluation.evaluatedAt).toLocaleDateString(),
-    score: evaluation.score,
-    maxMarks: evaluation.maxMarks,
-    percentage: ((evaluation.score / evaluation.maxMarks) * 100).toFixed(0),
-  }));
-
-  // Get topic performance data
-  const topicPerformance = (progress?.topicProgress || []).map((data: any) => ({
-    topic: data.topic,
-    averageScore: data.lastScore || 0,
-    attempts: data.attempts || 0,
-  }));
-
-  // Calculate stats properly
-  const totalAttempts = progress?.overallAttempts || 0;
-  const topicsCovered = topicPerformance.length;
-  const weakTopicsCount = (progress?.topicProgress || []).filter(
-    (tp: any) => tp.lastScore && (tp.lastScore / 12) * 100 < 50
-  ).length;
 
   return (
     <div className="space-y-6">
@@ -166,17 +215,40 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
       {/* Topic Performance Chart */}
       {topicPerformance.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-bold mb-4">Performance by Topic</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={topicPerformance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="topic" angle={-45} textAnchor="end" height={100} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="averageScore" fill="#8b5cf6" name="Average Score" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-bold">Performance by Topic</h3>
+            <span className="text-xs text-muted-foreground">Drag sideways to see more topics</span>
+          </div>
+          <div
+            ref={chartScrollRef}
+            className="overflow-x-auto overscroll-x-contain cursor-grab active:cursor-grabbing select-none"
+            onPointerDown={handleChartPointerDown}
+            onPointerMove={handleChartPointerMove}
+            onPointerUp={stopChartDrag}
+            onPointerCancel={stopChartDrag}
+            onPointerLeave={(event) => {
+              if (dragStateRef.current.active) stopChartDrag(event);
+            }}
+          >
+            <div style={{ width: topicChartWidth, height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topicPerformance} margin={{ bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="topic"
+                    angle={-45}
+                    textAnchor="end"
+                    interval={0}
+                    height={110}
+                  />
+                  <YAxis domain={[0, 12]} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="averageScore" fill="#8b5cf6" name="Average Score" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </Card>
       )}
 
@@ -186,7 +258,7 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
           <h3 className="text-lg font-bold mb-4">Topic Details</h3>
           <div className="space-y-3">
             {topicPerformance.map((topic: any, index: number) => {
-              const topicData = progress?.topicProgress?.[topic.topic];
+              const topicData = topicProgressByName.get(String(topic.topic).toLowerCase());
               const rawDifficulty = topicData?.difficulty;
               const difficulty =
                 rawDifficulty === "easy" || rawDifficulty === "hard" ? rawDifficulty : "medium";
@@ -227,13 +299,13 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
                     </div>
                   </div>
 
-                  {topicData?.weakAreas?.length > 0 && (
+                  {(topicData?.weakAreas?.length ?? 0) > 0 && (
                     <div className="mb-2">
                       <p className="text-xs font-medium text-red-700 mb-1">
                         Weak Areas:
                       </p>
                       <div className="flex flex-wrap gap-1">
-                        {topicData.weakAreas.map((area: string, i: number) => (
+                        {topicData?.weakAreas?.map((area: string, i: number) => (
                           <span
                             key={i}
                             className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs"
@@ -245,13 +317,13 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
                     </div>
                   )}
 
-                  {topicData?.strongAreas?.length > 0 && (
+                  {(topicData?.strongAreas?.length ?? 0) > 0 && (
                     <div>
                       <p className="text-xs font-medium text-green-700 mb-1">
                         Strong Areas:
                       </p>
                       <div className="flex flex-wrap gap-1">
-                        {topicData.strongAreas.map((area: string, i: number) => (
+                        {topicData?.strongAreas?.map((area: string, i: number) => (
                           <span
                             key={i}
                             className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs"

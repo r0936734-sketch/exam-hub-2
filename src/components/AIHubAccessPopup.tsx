@@ -65,7 +65,7 @@ export function AIHubAccessPopup({
   }, [token, userId]);
 
   const handleOpenTelegram = () => {
-    window.open("https://t.me/SiyaRam202", "_blank");
+    window.open("https://t.me/Sitaaram1001", "_blank");
   };
 
   const askPassReceived = () => {
@@ -131,7 +131,7 @@ export function AIHubAccessPopup({
                 <div>
                   <p className="font-semibold text-cyan-900">Get your passcode</p>
                   <p className="mt-1 text-xs text-cyan-800">
-                    DM <span className="font-mono font-bold">@SiyaRam202</span> on Telegram to receive your personal passcode.
+                    DM <span className="font-mono font-bold">@Sitaram1001</span> on Telegram to receive your personal passcode.
                   </p>
                 </div>
               </AlertDescription>
