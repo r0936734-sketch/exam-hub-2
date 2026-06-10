@@ -131,7 +131,7 @@ export function AIHubAccessPopup({
                 <div>
                   <p className="font-semibold text-cyan-900">Get your passcode</p>
                   <p className="mt-1 text-xs text-cyan-800">
-                    DM <span className="font-mono font-bold">@Sitaram1001</span> on Telegram to receive your personal passcode.
+                    DM <span className="font-mono font-bold">@Sitaaram1001</span> on Telegram to receive your personal passcode.
                   </p>
                 </div>
               </AlertDescription>
