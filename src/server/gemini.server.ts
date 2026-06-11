@@ -491,6 +491,8 @@ Requirements:
 - For numerical questions: show all working steps, tables, and final answer clearly
 - For theory questions: use clear headings, examples, and diagram descriptions where needed
 - Write as if a top-scoring student wrote this answer
+- Format the answer in clean Markdown using short headings, bullet points, numbered steps, and Markdown tables when a table improves clarity
+- Use readable plain-text math with Unicode symbols where useful (×, ÷, ≈, ≥, ≤, µs). Do not use LaTeX commands such as \\frac, \\text, \\mu, \\times, or math dollar delimiters
 
 Return ONLY the model answer. No preamble.`;
 
@@ -617,7 +619,9 @@ Rules:
 - Each bullet section: if nothing to report, write - None
 - Score must be a single number like 7 or 9.5
 - Be specific in feedback (name the exact missing concept or wrong step)
-- Model answer must be exam-ready and high-scoring`;
+- Model answer must be exam-ready and high-scoring
+- Format MODEL_ANSWER in clean Markdown using short headings, bullet points, numbered steps, and Markdown tables when useful
+- Use readable plain-text math with Unicode symbols where useful (×, ÷, ≈, ≥, ≤, µs). Do not use LaTeX commands such as \\frac, \\text, \\mu, \\times, or math dollar delimiters`;
 
   onProgress?.(getLoadingMessage(IMAGE_OCR_MESSAGES, messageIndex++));
 
