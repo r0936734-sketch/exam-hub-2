@@ -184,7 +184,7 @@ export const generateQuestionFn = createServerFn({
       }
 
       // Generate question
-      const { question, type } = await generateQuestion(
+      const { question, type, selectedTopic, modelNotices } = await generateQuestion(
         topic,
         marks,
         questionType,
@@ -202,6 +202,8 @@ export const generateQuestionFn = createServerFn({
 
       let finalQuestion = question;
       let finalType = type;
+      let finalTopic = selectedTopic;
+      let finalModelNotices = [...modelNotices];
 
       if (isDuplicate) {
         // Retry if duplicate
@@ -218,14 +220,18 @@ export const generateQuestionFn = createServerFn({
         );
         finalQuestion = retry.question;
         finalType = retry.type;
+        finalTopic = retry.selectedTopic;
+        finalModelNotices = [...finalModelNotices, ...retry.modelNotices];
       }
 
       // Store generated question
-      await storeGeneratedQuestion(user.id, topic, subject, finalQuestion, marks, finalType);
+      await storeGeneratedQuestion(user.id, finalTopic, subject, finalQuestion, marks, finalType);
 
       return {
         question: finalQuestion,
         type: finalType,
+        topic: finalTopic,
+        modelNotices: finalModelNotices,
         marks,
         wordLimit: marks === 8 ? 125 : 200,
       };
@@ -274,7 +280,7 @@ export const evaluateAnswerFn = createServerFn({
 
       // Read the handwritten answer, evaluate it, and generate the model answer
       // in one Gemini Vision request to reduce quota usage.
-      const { evaluation, modelAnswer, ocrText } = await evaluateAnswerFromImage(
+      const { evaluation, modelAnswer, ocrText, modelNotices } = await evaluateAnswerFromImage(
         imageUrl,
         questionText,
         marks,
@@ -306,6 +312,7 @@ export const evaluateAnswerFn = createServerFn({
         },
         modelAnswer,
         ocrText,
+        modelNotices,
       };
     } catch (error) {
       console.error("Answer evaluation error:", error);

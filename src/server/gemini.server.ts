@@ -276,6 +276,41 @@ Star topology: each computer connected via 10 m cable to central switch`;
   return ""; // No seed — theory question
 }
 
+function normalizeTopicName(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function findMatchingSubtopic(value: string, candidateSubtopics: string[]) {
+  const normalizedValue = normalizeTopicName(value);
+  return candidateSubtopics.find((subtopic) => normalizeTopicName(subtopic) === normalizedValue);
+}
+
+function parseGeneratedQuestionResponse(
+  responseText: string,
+  candidateSubtopics: string[],
+): { question: string; selectedTopic?: string } {
+  const selectedMatch = responseText.match(/SELECTED_SUBTOPIC:\s*(.+)/i);
+  const questionMatch = responseText.match(/QUESTION:\s*([\s\S]*)/i);
+  const selectedTopic = selectedMatch
+    ? findMatchingSubtopic(selectedMatch[1].trim(), candidateSubtopics)
+    : undefined;
+
+  if (questionMatch?.[1]?.trim()) {
+    return {
+      question: questionMatch[1].trim(),
+      selectedTopic,
+    };
+  }
+
+  return {
+    question: responseText
+      .replace(/SELECTED_SUBTOPIC:\s*.+/gi, "")
+      .replace(/QUESTION:\s*/gi, "")
+      .trim(),
+    selectedTopic,
+  };
+}
+
 /**
  * Generate university-level exam question using Gemini
  */
@@ -286,8 +321,14 @@ export async function generateQuestion(
   context: QuestionGenerationContext = {},
   customPrompt?: string,
   onProgress?: (message: string) => void,
-): Promise<{ question: string; type: "theory" | "numerical" }> {
+): Promise<{
+  question: string;
+  type: "theory" | "numerical";
+  selectedTopic: string;
+  modelNotices: string[];
+}> {
   let messageIndex = 0;
+  const modelNotices: string[] = [];
 
   // Get numerical seed data for this topic
   const numericalSeed = getNumericalSeed(topic);
@@ -361,7 +402,7 @@ Selection rules:
 - Prefer an explanation/comparison/design subtopic when QUESTION TYPE is theory
 - If QUESTION TYPE is auto, choose the subtopic that best fits a high-quality ${marks}-mark question
 - If the student's special instruction points toward a specific item in the list, follow it
-- Do not mention that you selected the subtopic; output only the final question\n`
+- SELECTED_SUBTOPIC must exactly match one item from the list\n`
     : "";
 
   const prompt = `You are an experienced Indian university paper setter for LT-grade / IKTU / AKTU semester examinations (B.Tech / BCA / MCA / B.Sc CS level).
@@ -395,8 +436,14 @@ VALIDATION BEFORE OUTPUT:
 ✓ Matches IKTU/AKTU university style
 ✓ No fragments, no truncation
 
-Output ONLY the question text.
-No numbering. No marks label. No explanation. No model answer.`;
+${shouldChooseSubtopic
+  ? `Output EXACTLY in this format:
+SELECTED_SUBTOPIC: [exact subtopic from the list]
+QUESTION: [question text]
+
+No numbering. No marks label. No explanation. No model answer.`
+  : `Output ONLY the question text.
+No numbering. No marks label. No explanation. No model answer.`}`;
 
   onProgress?.(getLoadingMessage(QUESTION_GENERATION_MESSAGES, messageIndex++));
 
@@ -419,10 +466,17 @@ No numbering. No marks label. No explanation. No model answer.`;
         onProgress?.(getLoadingMessage(QUESTION_GENERATION_MESSAGES, messageIndex++));
       }
     },
-    onFallback: (message) => onProgress?.(message),
+    onFallback: (message) => {
+      modelNotices.push(message);
+      onProgress?.(message);
+    },
   });
 
-  questionText = questionText.trim();
+  const parsedQuestion = shouldChooseSubtopic
+    ? parseGeneratedQuestionResponse(questionText.trim(), candidateSubtopics)
+    : { question: questionText.trim(), selectedTopic: undefined };
+  questionText = parsedQuestion.question;
+  const selectedTopic = parsedQuestion.selectedTopic ?? (shouldChooseSubtopic ? candidateSubtopics[0] : topic);
 
   // Post-generation cleanup
   // Strip any leading numbering like "1." or "Q1." accidentally added
@@ -440,7 +494,7 @@ No numbering. No marks label. No explanation. No model answer.`;
 
   onProgress?.(getLoadingMessage(QUESTION_GENERATION_MESSAGES, messageIndex + 1));
 
-  return { question: questionText, type: detectedType };
+  return { question: questionText, type: detectedType, selectedTopic, modelNotices };
 }
 
 // ============================================================================
@@ -608,9 +662,15 @@ export async function evaluateAnswerFromImage(
   questionText: string,
   marks: number,
   onProgress?: (message: string) => void,
-): Promise<{ evaluation: EvaluationFeedback; modelAnswer: string; ocrText: string }> {
+): Promise<{
+  evaluation: EvaluationFeedback;
+  modelAnswer: string;
+  ocrText: string;
+  modelNotices: string[];
+}> {
   const wordLimit = marks <= 8 ? 130 : 220;
   let messageIndex = 0;
+  const modelNotices: string[] = [];
 
   const prompt = `You are an experienced Indian university examiner evaluating a handwritten exam answer from an image.
 
@@ -673,7 +733,10 @@ Rules:
           ),
         );
     },
-    onFallback: (message) => onProgress?.(message),
+    onFallback: (message) => {
+      modelNotices.push(message);
+      onProgress?.(message);
+    },
   });
   responseText = responseText.trim();
 
@@ -683,6 +746,7 @@ Rules:
     evaluation: parseEvaluationResponse(responseText, marks),
     modelAnswer: extractSection(responseText, "MODEL_ANSWER").trim(),
     ocrText: extractSection(responseText, "OCR_TEXT", "SCORE:").trim(),
+    modelNotices,
   };
 }
 

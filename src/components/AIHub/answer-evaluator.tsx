@@ -76,6 +76,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
           }
 
           setEvaluation(data);
+          data.modelNotices?.forEach((notice: string) => toast.info(notice));
           toast.success("Answer evaluated successfully");
           setError("");
         } catch (err) {
@@ -201,7 +202,9 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                 "Reading your answer image and extracting the important parts...",
                 "This can take around 2 minutes. Take a quick water break.",
                 "Comparing your answer with the question and marking scheme...",
+                "If the first AI model is busy, we will switch to another model automatically...",
                 "Checking missing concepts, incorrect logic, and exam presentation...",
+                "Still working. A fallback model may be preparing your evaluation now...",
                 "Preparing clear feedback and a formatted model answer...",
               ]}
               variant="processing"

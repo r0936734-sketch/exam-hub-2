@@ -56,7 +56,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const [question, setQuestion] = useState<{
     text: string;
     type: string;
+    topic?: string;
   } | null>(null);
+  const [generatedTopic, setGeneratedTopic] = useState("");
 
   // Evaluation states
   const [evaluationMode, setEvaluationMode] = useState(false);
@@ -83,7 +85,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             setQuestion({
               text: pending.questionText,
               type: pending.questionType,
+              topic: pending.topic,
             });
+            setGeneratedTopic(pending.topic);
             setEvaluationQuestionText(pending.questionText);
             setMarks(pending.marks as 8 | 12);
             setSelectedTopic(pending.topic);
@@ -121,6 +125,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
     setEvaluation(null);
     setEvaluationMode(false);
     setEvaluationQuestionText("");
+    setGeneratedTopic("");
     setImageFile(null);
     setImagePreview("");
     setEvaluationError("");
@@ -146,8 +151,11 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
       setQuestion({
         text: data.question,
         type: data.type,
+        topic: data.topic,
       });
+      setGeneratedTopic(data.topic || selectedTopic.trim() || "");
       setEvaluationQuestionText(data.question);
+      data.modelNotices?.forEach((notice: string) => toast.info(notice));
       setError("");
     } catch (err) {
       setError("Failed to generate question. Please try again.");
@@ -219,7 +227,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               imageUrl,
               questionText: questionForEvaluation,
               marks,
-              topic: selectedTopic.trim() || "Custom evaluation",
+              topic: generatedTopic || selectedTopic.trim() || "Custom evaluation",
               subject,
             },
           });
@@ -231,6 +239,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           }
 
           setEvaluation(data);
+          data.modelNotices?.forEach((notice: string) => toast.info(notice));
           toast.success("Answer evaluated successfully");
           setEvaluationError("");
 
@@ -266,9 +275,10 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject Category</label>
           <select
             value={selectedCategory}
-        onChange={(e) => {
+            onChange={(e) => {
               setSelectedCategory(e.target.value);
               setSelectedTopic("");
+              setGeneratedTopic("");
             }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
             disabled={loading}
@@ -287,7 +297,10 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topic/Subtopic</label>
           <select
             value={selectedTopic}
-            onChange={(e) => setSelectedTopic(e.target.value)}
+            onChange={(e) => {
+              setSelectedTopic(e.target.value);
+              setGeneratedTopic("");
+            }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
             disabled={loading || !selectedCategory}
           >
@@ -366,14 +379,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           <div className="mb-4">
             <LoadingAnimation
               isVisible={loading}
-          messages={[
+              messages={[
                 selectedTopic.trim()
                   ? "Reading the selected topic and marks..."
                   : "Reviewing all subtopics in the selected category...",
                 "Building an exam-style question with the right difficulty...",
+                "If the first AI model is busy, we will switch to another model automatically...",
                 selectedTopic.trim()
                   ? "Checking syllabus fit and wording clarity..."
                   : "Choosing the most important subtopic for your selected question type...",
+                "Still working. A fallback model may be finishing the request now...",
                 "Adding clean formatting so it is easy to copy and answer...",
               ]}
               variant="processing"
@@ -409,6 +424,11 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                 Type: {question.type.charAt(0).toUpperCase() + question.type.slice(1)}
               </p>
+              {question.topic && (
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Topic: {question.topic}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleCopyQuestion}>
@@ -536,7 +556,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                     "Reading your handwritten answer from the image...",
                     "Evaluation can take around 2 minutes. Take a quick water break.",
                     "Comparing your work with the exact question requirements...",
+                    "If the first AI model fails or is busy, we will switch to another model automatically...",
                     "Checking concepts, calculations, diagrams, and logic step by step...",
+                    "Still working. A fallback model may be preparing your evaluation now...",
                     "Looking for missing points and incorrect statements...",
                     "Writing useful feedback and a properly formatted model answer...",
                   ]}
