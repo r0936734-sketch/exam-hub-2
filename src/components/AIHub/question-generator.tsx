@@ -108,10 +108,13 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   }, [subject]);
 
   const handleGenerateQuestion = async () => {
-    if (!selectedTopic.trim()) {
-      setError("Please select a topic");
+    if (!selectedCategory.trim()) {
+      setError("Please select a subject category");
       return;
     }
+
+    const topicForGeneration = selectedTopic.trim() || selectedCategory.trim();
+    const autoSelectSubtopic = !selectedTopic.trim();
 
     setLoading(true);
     setError("");
@@ -125,7 +128,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
     try {
       const data = await generateQuestionFn({
         data: {
-          topic: selectedTopic.trim(),
+          topic: topicForGeneration,
+          categoryName: selectedCategory.trim(),
+          candidateSubtopics: autoSelectSubtopic ? subtopics : [],
           marks,
           questionType,
           subject,
@@ -261,7 +266,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject Category</label>
           <select
             value={selectedCategory}
-            onChange={(e) => {
+        onChange={(e) => {
               setSelectedCategory(e.target.value);
               setSelectedTopic("");
             }}
@@ -286,13 +291,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
             disabled={loading || !selectedCategory}
           >
-            <option value="">Select a topic...</option>
+            <option value="">Auto choose important subtopic...</option>
             {subtopics.map((topic) => (
               <option key={topic} value={topic}>
                 {topic}
               </option>
             ))}
           </select>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Leave this on auto to let AI choose the most important subtopic from the selected category.
+          </p>
         </div>
 
         {/* Question Settings */}
@@ -358,10 +366,14 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           <div className="mb-4">
             <LoadingAnimation
               isVisible={loading}
-              messages={[
-                "Reading the selected topic and marks...",
+          messages={[
+                selectedTopic.trim()
+                  ? "Reading the selected topic and marks..."
+                  : "Reviewing all subtopics in the selected category...",
                 "Building an exam-style question with the right difficulty...",
-                "Checking syllabus fit and wording clarity...",
+                selectedTopic.trim()
+                  ? "Checking syllabus fit and wording clarity..."
+                  : "Choosing the most important subtopic for your selected question type...",
                 "Adding clean formatting so it is easy to copy and answer...",
               ]}
               variant="processing"
@@ -372,7 +384,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
         <Button
           onClick={handleGenerateQuestion}
-          disabled={loading || !selectedTopic.trim()}
+          disabled={loading || !selectedCategory.trim()}
           className="w-full"
           size="lg"
         >

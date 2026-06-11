@@ -201,6 +201,8 @@ interface QuestionGenerationContext {
   averageScore?: number;
   weakAreas?: string[];
   difficulty?: "easy" | "medium" | "hard";
+  selectedCategory?: string;
+  candidateSubtopics?: string[];
 }
 
 /**
@@ -305,6 +307,12 @@ export async function generateQuestion(
     contextBlock = `[FOCUS AREAS: ${context.weakAreas.join(", ")}]\n`;
   }
 
+  const candidateSubtopics = context.candidateSubtopics?.filter(Boolean) ?? [];
+  const shouldChooseSubtopic = candidateSubtopics.length > 0;
+  const topicLabel = shouldChooseSubtopic
+    ? `${context.selectedCategory ?? topic} (AI should choose the best subtopic)`
+    : topic;
+
   // Marks-based length and depth guide
   const marksGuide =
     marks <= 8
@@ -341,13 +349,29 @@ export async function generateQuestion(
 - "What is the difference between Symmetric Key and Asymmetric Key encryption? Explain with examples."
 - "Briefly describe the names, functions and protocols of all seven layers of the OSI Reference Model."`;
 
+  const subtopicSelectionBlock = shouldChooseSubtopic
+    ? `\nSUBTOPIC SELECTION MODE:
+The student selected the broad category "${context.selectedCategory ?? topic}" and did not choose a specific subtopic.
+Choose the most exam-important subtopic from this exact list, while respecting QUESTION TYPE, MARKS, and any special instruction:
+${candidateSubtopics.map((subtopic, index) => `${index + 1}. ${subtopic}`).join("\n")}
+
+Selection rules:
+- Pick one strongest subtopic for a university-style question
+- Prefer a numerical/problem-solving subtopic when QUESTION TYPE is numerical
+- Prefer an explanation/comparison/design subtopic when QUESTION TYPE is theory
+- If QUESTION TYPE is auto, choose the subtopic that best fits a high-quality ${marks}-mark question
+- If the student's special instruction points toward a specific item in the list, follow it
+- Do not mention that you selected the subtopic; output only the final question\n`
+    : "";
+
   const prompt = `You are an experienced Indian university paper setter for LT-grade / IKTU / AKTU semester examinations (B.Tech / BCA / MCA / B.Sc CS level).
 
-${contextBlock}TOPIC: ${topic}
+${contextBlock}TOPIC: ${topicLabel}
 MARKS: ${marks}
 QUESTION TYPE: ${effectiveType}
 ${seedBlock}
 ${marksGuide}
+${subtopicSelectionBlock}
 
 ${typeInstruction}
 

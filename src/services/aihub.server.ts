@@ -133,6 +133,8 @@ export const generateQuestionFn = createServerFn({
   .inputValidator(
     (data: {
       topic: string;
+      categoryName?: string;
+      candidateSubtopics?: string[];
       marks: number;
       questionType: "theory" | "numerical" | "auto";
       subject: string;
@@ -146,12 +148,21 @@ export const generateQuestionFn = createServerFn({
         return { error: "Unauthorized" };
       }
 
-      const { topic, marks, questionType, subject, customPrompt } = data;
+      const { topic, categoryName, marks, questionType, subject, customPrompt } = data;
 
       // Validation
       if (!topic || ![8, 12].includes(marks) || !questionType || !subject) {
         return { error: "Invalid request parameters" };
       }
+
+      const syllabusCategories = getBuiltInSyllabusCategories(subject);
+      const selectedCategory = categoryName
+        ? syllabusCategories.find((category) => category.name === categoryName)
+        : syllabusCategories.find((category) => category.subtopics.includes(topic));
+      const isAutoSubtopicSelection = Boolean(
+        selectedCategory && topic === selectedCategory.name,
+      );
+      const candidateSubtopics = isAutoSubtopicSelection ? selectedCategory?.subtopics ?? [] : [];
 
       // Get user's progress for personalization
       const progress = await getUserProgress(user.id, subject);
@@ -168,12 +179,22 @@ export const generateQuestionFn = createServerFn({
 
       // Check built-in syllabus topics
       const syllabusTopics = getBuiltInSyllabusTopics(subject);
-      if (syllabusTopics.length > 0 && !syllabusTopics.includes(topic)) {
+      if (syllabusTopics.length > 0 && !syllabusTopics.includes(topic) && !isAutoSubtopicSelection) {
         return { error: "Topic not found in the built-in syllabus" };
       }
 
       // Generate question
-      const { question, type } = await generateQuestion(topic, marks, questionType, context, customPrompt);
+      const { question, type } = await generateQuestion(
+        topic,
+        marks,
+        questionType,
+        {
+          ...context,
+          selectedCategory: selectedCategory?.name,
+          candidateSubtopics,
+        },
+        customPrompt,
+      );
 
       // Check for duplicates
       const questionHash = generateQuestionHash(question);
@@ -184,7 +205,17 @@ export const generateQuestionFn = createServerFn({
 
       if (isDuplicate) {
         // Retry if duplicate
-        const retry = await generateQuestion(topic, marks, questionType, context, customPrompt);
+        const retry = await generateQuestion(
+          topic,
+          marks,
+          questionType,
+          {
+            ...context,
+            selectedCategory: selectedCategory?.name,
+            candidateSubtopics,
+          },
+          customPrompt,
+        );
         finalQuestion = retry.question;
         finalType = retry.type;
       }
