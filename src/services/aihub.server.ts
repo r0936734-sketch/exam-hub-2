@@ -404,7 +404,7 @@ export const getEvaluationHistoryFn = createServerFn({
       return { error: "Unauthorized", history: [] };
     }
 
-    const history = await getEvaluationHistory(user.id);
+    const history = await getEvaluationHistory(user.id, 500);
     return { history };
   } catch (error) {
     console.error("History fetch error:", error);
