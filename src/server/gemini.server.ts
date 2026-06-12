@@ -19,7 +19,8 @@ const ai = new GoogleGenAI({
 
 type GenerateContentParams = Parameters<typeof ai.models.generateContentStream>[0];
 
-const GEMINI_STREAM_TIMEOUT_MS = 45_000;
+const GEMINI_STREAM_START_TIMEOUT_MS = 120_000;
+const GEMINI_STREAM_CHUNK_TIMEOUT_MS = 120_000;
 
 const highThinkingSearchConfig = {
   thinkingConfig: {
@@ -148,7 +149,7 @@ async function streamGeminiTextWithFallback({
           config: model.config,
           contents,
         }),
-        GEMINI_STREAM_TIMEOUT_MS,
+        GEMINI_STREAM_START_TIMEOUT_MS,
         `${operationLabel} timed out while starting ${model.name}`,
       );
 
@@ -157,7 +158,7 @@ async function streamGeminiTextWithFallback({
       while (true) {
         const chunk = await withTimeout(
           iterator.next(),
-          GEMINI_STREAM_TIMEOUT_MS,
+          GEMINI_STREAM_CHUNK_TIMEOUT_MS,
           `${operationLabel} timed out while streaming from ${model.name}`,
         );
 

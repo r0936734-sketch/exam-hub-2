@@ -24,6 +24,78 @@ import {
 } from "@/server/gemini.server";
 import { getCurrentSessionServerFn } from "@/services/auth.functions";
 
+type EvaluationProgressStatus = "processing" | "switching" | "completed" | "error";
+
+interface EvaluationProgress {
+  requestId: string;
+  status: EvaluationProgressStatus;
+  message: string;
+  notices: string[];
+  startedAt: number;
+  updatedAt: number;
+}
+
+const evaluationProgressByRequestId = new Map<string, EvaluationProgress>();
+const EVALUATION_PROGRESS_TTL_MS = 15 * 60 * 1000;
+
+function isValidRequestId(requestId?: string) {
+  return Boolean(requestId && /^[a-zA-Z0-9_-]{8,100}$/.test(requestId));
+}
+
+function cleanupEvaluationProgress() {
+  const cutoff = Date.now() - EVALUATION_PROGRESS_TTL_MS;
+  for (const [requestId, progress] of evaluationProgressByRequestId) {
+    if (progress.updatedAt < cutoff) {
+      evaluationProgressByRequestId.delete(requestId);
+    }
+  }
+}
+
+function updateEvaluationProgress(
+  requestId: string | undefined,
+  patch: Partial<Omit<EvaluationProgress, "requestId" | "startedAt" | "updatedAt">>,
+) {
+  if (!isValidRequestId(requestId)) return;
+
+  cleanupEvaluationProgress();
+  const now = Date.now();
+  const current =
+    evaluationProgressByRequestId.get(requestId) ??
+    ({
+      requestId,
+      status: "processing",
+      message: "Starting answer evaluation...",
+      notices: [],
+      startedAt: now,
+      updatedAt: now,
+    } as EvaluationProgress);
+
+  evaluationProgressByRequestId.set(requestId, {
+    ...current,
+    ...patch,
+    notices: patch.notices ?? current.notices,
+    updatedAt: now,
+  });
+}
+
+/**
+ * Get live progress for a running handwritten answer evaluation.
+ */
+export const getEvaluationProgressFn = createServerFn({
+  method: "POST",
+})
+  .inputValidator((data: { requestId: string }) => data)
+  .handler(async ({ data }) => {
+    if (!isValidRequestId(data.requestId)) {
+      return { progress: null };
+    }
+
+    cleanupEvaluationProgress();
+    return {
+      progress: evaluationProgressByRequestId.get(data.requestId) ?? null,
+    };
+  });
+
 function getBuiltInSyllabusCategories(subject: string) {
   if (subject.toLowerCase() !== "computer science") {
     return [];
@@ -263,9 +335,12 @@ export const evaluateAnswerFn = createServerFn({
       marks: number;
       topic: string;
       subject: string;
+      requestId?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
+    const requestId = data.requestId;
+
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -278,13 +353,39 @@ export const evaluateAnswerFn = createServerFn({
         return { error: "Invalid request parameters" };
       }
 
+      updateEvaluationProgress(requestId, {
+        status: "processing",
+        message: "Image received. Preparing it for AI evaluation...",
+      });
+
       // Read the handwritten answer, evaluate it, and generate the model answer
       // in one Gemini Vision request to reduce quota usage.
       const { evaluation, modelAnswer, ocrText, modelNotices } = await evaluateAnswerFromImage(
         imageUrl,
         questionText,
         marks,
+        (message) => {
+          const isFallbackNotice = message.toLowerCase().includes("switching to a fallback model");
+          const progressPatch: Parameters<typeof updateEvaluationProgress>[1] = {
+            status: isFallbackNotice ? "switching" : "processing",
+            message,
+          };
+
+          if (isFallbackNotice && isValidRequestId(requestId)) {
+            const currentNotices =
+              evaluationProgressByRequestId.get(requestId)?.notices ?? [];
+            progressPatch.notices = [...currentNotices, message];
+          }
+
+          updateEvaluationProgress(requestId, progressPatch);
+        },
       );
+
+      updateEvaluationProgress(requestId, {
+        status: "processing",
+        message: "Evaluation finished. Saving your progress...",
+        notices: modelNotices,
+      });
 
       // Update progress
       await updateTopicProgress(user.id, subject, topic, evaluation.score, marks);
@@ -301,6 +402,12 @@ export const evaluateAnswerFn = createServerFn({
       // Delete the pending question after successful evaluation
       await deletePendingQuestion(user.id, subject);
 
+      updateEvaluationProgress(requestId, {
+        status: "completed",
+        message: "Done. Your evaluated answer is ready.",
+        notices: modelNotices,
+      });
+
       return {
         score: evaluation.score,
         maxMarks: marks,
@@ -316,6 +423,11 @@ export const evaluateAnswerFn = createServerFn({
       };
     } catch (error) {
       console.error("Answer evaluation error:", error);
+      updateEvaluationProgress(requestId, {
+        status: "error",
+        message: "Evaluation could not be completed. Please try again.",
+      });
+
       if (isGeminiQuotaError(error)) {
         return { error: "Daily AI quota reached. Please try again tomorrow." };
       }

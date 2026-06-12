@@ -30,6 +30,7 @@ import {
   generateQuestionFn,
   getCategorizedTopicsFn,
   evaluateAnswerFn,
+  getEvaluationProgressFn,
   getPendingQuestionFn,
   clearPendingQuestionFn,
 } from "@/services/aihub.server";
@@ -42,6 +43,12 @@ interface TopicCategory {
 
 interface QuestionGeneratorProps {
   subject: string;
+}
+
+interface EvaluationProgress {
+  status: "processing" | "switching" | "completed" | "error";
+  message: string;
+  notices: string[];
 }
 
 export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
@@ -58,6 +65,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
     type: string;
     topic?: string;
   } | null>(null);
+  const [generationModelNotices, setGenerationModelNotices] = useState<string[]>([]);
   const [generatedTopic, setGeneratedTopic] = useState("");
 
   // Evaluation states
@@ -68,6 +76,8 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const [evaluating, setEvaluating] = useState(false);
   const [evaluationError, setEvaluationError] = useState("");
   const [evaluation, setEvaluation] = useState<any | null>(null);
+  const [evaluationRequestId, setEvaluationRequestId] = useState("");
+  const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
 
   // Fetch categories and pending question on mount
   useEffect(() => {
@@ -111,6 +121,31 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
     }
   }, [subject]);
 
+  useEffect(() => {
+    if (!evaluating || !evaluationRequestId) return;
+
+    let cancelled = false;
+    const loadProgress = async () => {
+      try {
+        const result = await getEvaluationProgressFn({
+          data: { requestId: evaluationRequestId },
+        });
+        if (!cancelled && result.progress) {
+          setEvaluationProgress(result.progress);
+        }
+      } catch {
+        // Progress polling is best-effort; the evaluation request still owns the final result.
+      }
+    };
+
+    loadProgress();
+    const timer = window.setInterval(loadProgress, 1500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [evaluating, evaluationRequestId]);
+
   const handleGenerateQuestion = async () => {
     if (!selectedCategory.trim()) {
       setError("Please select a subject category");
@@ -123,6 +158,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
     setLoading(true);
     setError("");
     setEvaluation(null);
+    setGenerationModelNotices([]);
     setEvaluationMode(false);
     setEvaluationQuestionText("");
     setGeneratedTopic("");
@@ -155,7 +191,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
       });
       setGeneratedTopic(data.topic || selectedTopic.trim() || "");
       setEvaluationQuestionText(data.question);
-      data.modelNotices?.forEach((notice: string) => toast.info(notice));
+      setGenerationModelNotices(data.modelNotices ?? []);
       setError("");
     } catch (err) {
       setError("Failed to generate question. Please try again.");
@@ -215,6 +251,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
     setEvaluating(true);
     setEvaluationError("");
+    setEvaluation(null);
+    const requestId =
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setEvaluationRequestId(requestId);
+    setEvaluationProgress({
+      status: "processing",
+      message: "Uploading your answer image to the evaluator...",
+      notices: [],
+    });
 
     try {
       const reader = new FileReader();
@@ -229,6 +275,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               marks,
               topic: generatedTopic || selectedTopic.trim() || "Custom evaluation",
               subject,
+              requestId,
             },
           });
 
@@ -239,7 +286,6 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           }
 
           setEvaluation(data);
-          data.modelNotices?.forEach((notice: string) => toast.info(notice));
           toast.success("Answer evaluated successfully");
           setEvaluationError("");
 
@@ -384,11 +430,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                   ? "Reading the selected topic and marks..."
                   : "Reviewing all subtopics in the selected category...",
                 "Building an exam-style question with the right difficulty...",
-                "If the first AI model is busy, we will switch to another model automatically...",
                 selectedTopic.trim()
                   ? "Checking syllabus fit and wording clarity..."
                   : "Choosing the most important subtopic for your selected question type...",
-                "Still working. A fallback model may be finishing the request now...",
                 "Adding clean formatting so it is easy to copy and answer...",
               ]}
               variant="processing"
@@ -444,6 +488,15 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               </Button>
             </div>
           </div>
+
+          {generationModelNotices.length > 0 && (
+            <Alert className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 mb-4">
+              <AlertCircle className="w-4 h-4" />
+              <AlertDescription className="text-blue-800 dark:text-blue-300">
+                {generationModelNotices[generationModelNotices.length - 1]}
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="bg-white rounded p-4 border border-blue-200 dark:bg-slate-800 dark:border-blue-700">
             <FormattedAIText className="prose max-w-none text-gray-800 dark:prose-invert dark:text-gray-100">
@@ -522,7 +575,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                 <label htmlFor="image-upload" className="cursor-pointer block">
                   <Upload className="mx-auto h-12 w-12 text-green-600 dark:text-green-500 mb-2" />
                   <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Click to upload or drag and drop
+                    Click to upload
                   </p>
                   <p className="text-sm text-gray-500">JPG, PNG up to 10MB</p>
                 </label>
@@ -549,21 +602,14 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             )}
 
             {evaluating && (
-              <div className="mb-4">
+              <div className="mb-4 space-y-3">
                 <LoadingAnimation
                   isVisible={evaluating}
-                  messages={[
-                    "Reading your handwritten answer from the image...",
-                    "Evaluation can take around 2 minutes. Take a quick water break.",
-                    "Comparing your work with the exact question requirements...",
-                    "If the first AI model fails or is busy, we will switch to another model automatically...",
-                    "Checking concepts, calculations, diagrams, and logic step by step...",
-                    "Still working. A fallback model may be preparing your evaluation now...",
-                    "Looking for missing points and incorrect statements...",
-                    "Writing useful feedback and a properly formatted model answer...",
-                  ]}
-                  variant="processing"
-                  interval={3500}
+                  message={
+                    evaluationProgress?.message ??
+                    "Starting answer evaluation..."
+                  }
+                  variant={evaluationProgress?.status === "error" ? "error" : "processing"}
                 />
               </div>
             )}

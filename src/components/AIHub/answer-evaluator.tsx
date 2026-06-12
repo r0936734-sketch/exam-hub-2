@@ -1,15 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Upload, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { evaluateAnswerFn } from "@/services/aihub.server";
+import { evaluateAnswerFn, getEvaluationProgressFn } from "@/services/aihub.server";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { FormattedAIText } from "@/components/AIHub/formatted-ai-text";
 
 interface AnswerEvaluatorProps {
   subject: string;
+}
+
+interface EvaluationProgress {
+  status: "processing" | "switching" | "completed" | "error";
+  message: string;
+  notices: string[];
 }
 
 export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
@@ -21,6 +27,33 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [evaluation, setEvaluation] = useState<any | null>(null);
+  const [evaluationRequestId, setEvaluationRequestId] = useState("");
+  const [evaluationProgress, setEvaluationProgress] = useState<EvaluationProgress | null>(null);
+
+  useEffect(() => {
+    if (!loading || !evaluationRequestId) return;
+
+    let cancelled = false;
+    const loadProgress = async () => {
+      try {
+        const result = await getEvaluationProgressFn({
+          data: { requestId: evaluationRequestId },
+        });
+        if (!cancelled && result.progress) {
+          setEvaluationProgress(result.progress);
+        }
+      } catch {
+        // Progress is best-effort; the main evaluation request still controls success/failure.
+      }
+    };
+
+    loadProgress();
+    const timer = window.setInterval(loadProgress, 1500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [loading, evaluationRequestId]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,6 +84,16 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
 
     setLoading(true);
     setError("");
+    setEvaluation(null);
+    const requestId =
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setEvaluationRequestId(requestId);
+    setEvaluationProgress({
+      status: "processing",
+      message: "Uploading your answer image to the evaluator...",
+      notices: [],
+    });
 
     try {
       // Convert image to base64
@@ -66,6 +109,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
               marks,
               topic: topic.trim(),
               subject,
+              requestId,
             },
           });
 
@@ -76,7 +120,6 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
           }
 
           setEvaluation(data);
-          data.modelNotices?.forEach((notice: string) => toast.info(notice));
           toast.success("Answer evaluated successfully");
           setError("");
         } catch (err) {
@@ -196,20 +239,16 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
           )}
 
           {loading && (
-            <LoadingAnimation
-              isVisible={loading}
-              messages={[
-                "Reading your answer image and extracting the important parts...",
-                "This can take around 2 minutes. Take a quick water break.",
-                "Comparing your answer with the question and marking scheme...",
-                "If the first AI model is busy, we will switch to another model automatically...",
-                "Checking missing concepts, incorrect logic, and exam presentation...",
-                "Still working. A fallback model may be preparing your evaluation now...",
-                "Preparing clear feedback and a formatted model answer...",
-              ]}
-              variant="processing"
-              interval={3500}
-            />
+            <div className="space-y-3">
+              <LoadingAnimation
+                isVisible={loading}
+                message={
+                  evaluationProgress?.message ??
+                  "Starting answer evaluation..."
+                }
+                variant={evaluationProgress?.status === "error" ? "error" : "processing"}
+              />
+            </div>
           )}
 
           <Button
