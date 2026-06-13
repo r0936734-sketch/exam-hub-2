@@ -327,28 +327,28 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
+        <Card className="ai-hub-stat-card rounded-xl p-4">
           <h3 className="text-sm font-medium text-gray-600 mb-1">Total Attempts</h3>
           <p className="text-3xl font-bold text-blue-600">
             {progress?.overallAttempts || 0}
           </p>
         </Card>
 
-        <Card className="p-4">
+        <Card className="ai-hub-stat-card rounded-xl p-4">
           <h3 className="text-sm font-medium text-gray-600 mb-1">Average Score</h3>
           <p className="text-3xl font-bold text-green-600">
             {(progress?.overallAverageScore || 0).toFixed(1)}
           </p>
         </Card>
 
-        <Card className="p-4">
+        <Card className="ai-hub-stat-card rounded-xl p-4">
           <h3 className="text-sm font-medium text-gray-600 mb-1">Topics Covered</h3>
-          <p className="text-3xl font-bold text-purple-600">
+          <p className="text-3xl font-bold text-cyan-600">
             {topicPerformance.length}
           </p>
         </Card>
 
-        <Card className="p-4">
+        <Card className="ai-hub-stat-card rounded-xl p-4">
           <h3 className="text-sm font-medium text-gray-600 mb-1">Weak Topics</h3>
           <p className="text-3xl font-bold text-red-600">
             {weakTopicsCount}
@@ -357,9 +357,10 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
       </div>
 
       {/* Answer Activity Heat Map */}
-      <Card className="p-6">
+      <Card className="ai-hub-panel rounded-xl p-5 sm:p-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
+            <p className="ai-hub-kicker mb-2">Study pulse</p>
             <h3 className="text-lg font-bold flex items-center gap-2">
               <CalendarDays className="w-5 h-5 text-teal-500" />
               Answer Activity
@@ -444,7 +445,7 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
 
       {/* Score Trend Chart */}
       {chartData.length > 0 && (
-        <Card className="p-6">
+        <Card className="ai-hub-panel rounded-xl p-5 sm:p-6">
           <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
@@ -492,7 +493,7 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
 
       {/* Topic Performance Chart */}
       {topicPerformance.length > 0 && (
-        <Card className="p-6">
+        <Card className="ai-hub-panel rounded-xl p-5 sm:p-6">
           <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-bold">Performance by Topic</h3>
             <span className="text-xs text-muted-foreground">Drag sideways to see more topics</span>
@@ -532,7 +533,7 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
 
       {/* Topic Details */}
       {topicPerformance.length > 0 && (
-        <Card className="p-6">
+        <Card className="ai-hub-panel rounded-xl p-5 sm:p-6">
           <h3 className="text-lg font-bold mb-4">Topic Details</h3>
           <div className="space-y-3">
             {topicPerformance.map((topic: any, index: number) => {
@@ -548,7 +549,7 @@ export function ProgressDashboard({ subject }: ProgressDashboardProps) {
               const difficultyKey = difficulty as "easy" | "medium" | "hard";
 
               return (
-                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                <div key={index} className="rounded-lg border border-border bg-background/55 p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-semibold text-gray-800">
                       {topic.topic}

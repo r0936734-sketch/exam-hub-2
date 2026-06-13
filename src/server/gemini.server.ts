@@ -21,6 +21,8 @@ type GenerateContentParams = Parameters<typeof ai.models.generateContentStream>[
 
 const GEMINI_STREAM_START_TIMEOUT_MS = 120_000;
 const GEMINI_STREAM_CHUNK_TIMEOUT_MS = 120_000;
+const QUESTION_STREAM_START_TIMEOUT_MS = 180_000;
+const QUESTION_STREAM_CHUNK_TIMEOUT_MS = 180_000;
 
 const highThinkingSearchConfig = {
   thinkingConfig: {
@@ -125,6 +127,8 @@ async function streamGeminiTextWithFallback({
   onText,
   onProgressChunk,
   onFallback,
+  startTimeoutMs = GEMINI_STREAM_START_TIMEOUT_MS,
+  chunkTimeoutMs = GEMINI_STREAM_CHUNK_TIMEOUT_MS,
 }: {
   models: Array<{ name: string; config?: GenerateContentParams["config"] }>;
   contents: GenerateContentParams["contents"];
@@ -133,6 +137,8 @@ async function streamGeminiTextWithFallback({
   onText?: (text: string) => void;
   onProgressChunk?: () => void;
   onFallback?: (message: string) => void;
+  startTimeoutMs?: number;
+  chunkTimeoutMs?: number;
 }): Promise<string> {
   let lastError: unknown;
 
@@ -149,7 +155,7 @@ async function streamGeminiTextWithFallback({
           config: model.config,
           contents,
         }),
-        GEMINI_STREAM_START_TIMEOUT_MS,
+        startTimeoutMs,
         `${operationLabel} timed out while starting ${model.name}`,
       );
 
@@ -158,7 +164,7 @@ async function streamGeminiTextWithFallback({
       while (true) {
         const chunk = await withTimeout(
           iterator.next(),
-          GEMINI_STREAM_CHUNK_TIMEOUT_MS,
+          chunkTimeoutMs,
           `${operationLabel} timed out while streaming from ${model.name}`,
         );
 
@@ -462,6 +468,8 @@ No numbering. No marks label. No explanation. No model answer.`}`;
     contents,
     operationLabel: "Question generation",
     fallbackMessage: "Gemma 31B is busy or quota-limited. Switching to Gemma 26B...",
+    startTimeoutMs: QUESTION_STREAM_START_TIMEOUT_MS,
+    chunkTimeoutMs: QUESTION_STREAM_CHUNK_TIMEOUT_MS,
     onProgressChunk: () => {
       if (chunkCount++ % 3 === 0) {
         onProgress?.(getLoadingMessage(QUESTION_GENERATION_MESSAGES, messageIndex++));
@@ -659,7 +667,7 @@ Rules:
  * Read and evaluate a handwritten answer image in one Gemini Vision request.
  */
 export async function evaluateAnswerFromImage(
-  imageUrl: string,
+  imageUrls: string[],
   questionText: string,
   marks: number,
   onProgress?: (message: string) => void,
@@ -672,22 +680,28 @@ export async function evaluateAnswerFromImage(
   const wordLimit = marks <= 8 ? 130 : 220;
   let messageIndex = 0;
   const modelNotices: string[] = [];
+  const pageCount = imageUrls.length;
 
-  const prompt = `You are an experienced Indian university examiner evaluating a handwritten exam answer from an image.
+  const multiPageInstruction =
+    pageCount > 1
+      ? `\nThis answer spans ${pageCount} images, provided in order as Page 1, Page 2, etc. Treat them as one continuous handwritten answer — read all pages before evaluating, and merge the OCR text from all pages into a single OCR_TEXT section in the correct page order.\n`
+      : "";
+
+  const prompt = `You are an experienced Indian university examiner evaluating a handwritten exam answer from ${pageCount > 1 ? `${pageCount} images (multiple pages)` : "an image"}.
 
 Question: ${questionText}
 Total Marks: ${marks}
 Expected Answer Length: ~${wordLimit} words
-
+${multiPageInstruction}
 TASKS:
-1. Read all handwritten text from the image (OCR)
+1. Read all handwritten text from the image${pageCount > 1 ? "s" : ""} (OCR)
 2. Evaluate the answer against the question using university examiner standards
 3. Generate a complete model answer for the same question
 
 Respond in EXACTLY this format — no extra text outside these sections:
 
 OCR_TEXT:
-[write the extracted handwritten text here verbatim; mark unclear parts as [unclear]]
+[write the extracted handwritten text here verbatim${pageCount > 1 ? ", combining all pages in order" : ""}; mark unclear parts as [unclear]]
 SCORE: X/${marks}
 MISSING:
 - [missing concept or step]
@@ -710,11 +724,20 @@ Rules:
 
   onProgress?.(getLoadingMessage(IMAGE_OCR_MESSAGES, messageIndex++));
 
-  const imageData = await imageUrlToInlineData(imageUrl);
+  const imageParts = await Promise.all(
+    imageUrls.map(async (url, index) => {
+      const inlineData = await imageUrlToInlineData(url);
+      return pageCount > 1
+        ? [{ text: `Page ${index + 1}:` }, inlineData]
+        : [inlineData];
+    }),
+  );
+  const flattenedImageParts = imageParts.flat();
+
   const contents = [
     {
       role: "user" as const,
-      parts: [imageData, { text: prompt }],
+      parts: [...flattenedImageParts, { text: prompt }],
     },
   ];
 

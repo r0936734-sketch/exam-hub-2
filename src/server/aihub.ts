@@ -94,7 +94,16 @@ export interface GeneratedQuestion {
   wordLimit: number;
   questionHash: string;
   generatedAt: Date;
+  choices?: Array<{
+    question: string;
+    type: "theory" | "numerical";
+    topic: string;
+  }>;
 }
+
+export type PendingGeneratedQuestion = Omit<GeneratedQuestion, "_id"> & {
+  _id?: string;
+};
 
 // ============================================================================
 // AI Hub Access Control Functions
@@ -583,6 +592,11 @@ export async function storeGeneratedQuestion(
   questionText: string,
   marks: number,
   questionType: "theory" | "numerical",
+  choices: Array<{
+    question: string;
+    type: "theory" | "numerical";
+    topic: string;
+  }> = [],
 ): Promise<void> {
   const db = await connectToDatabase();
   const questionCollection = db.collection<GeneratedQuestion>(
@@ -604,6 +618,7 @@ export async function storeGeneratedQuestion(
     questionType,
     wordLimit,
     questionHash,
+    choices,
     generatedAt: new Date(),
   } as any);
 }
@@ -643,6 +658,81 @@ export async function deletePendingQuestion(
   );
 
   await questionCollection.deleteOne({ userId, subject });
+}
+
+/**
+ * Delete only the answered pending question variant after evaluation.
+ * If no variants remain, remove the pending question document.
+ */
+export async function deleteAnsweredPendingQuestion(
+  userId: string,
+  subject: string,
+  answeredQuestionText: string,
+): Promise<PendingGeneratedQuestion | null> {
+  const db = await connectToDatabase();
+  const questionCollection = db.collection<GeneratedQuestion>(
+    "generated_questions",
+  );
+
+  const pending = await questionCollection.findOne({ userId, subject });
+  if (!pending) return null;
+
+  const answeredHash = generateQuestionHash(answeredQuestionText);
+  const choices =
+    pending.choices && pending.choices.length > 0
+      ? pending.choices
+      : [
+          {
+            question: pending.questionText,
+            type: pending.questionType,
+            topic: pending.topic,
+          },
+        ];
+
+  const remainingChoices = choices.filter((choice) => {
+    const isAnswered =
+      choice.question.trim() === answeredQuestionText.trim() ||
+      generateQuestionHash(choice.question) === answeredHash;
+    return !isAnswered;
+  });
+
+  if (remainingChoices.length === choices.length) {
+    return {
+      ...pending,
+      _id: pending._id?.toString(),
+    } as any;
+  }
+
+  if (remainingChoices.length === 0) {
+    await questionCollection.deleteOne({ _id: pending._id });
+    return null;
+  }
+
+  const nextChoice = remainingChoices[0];
+  const questionHash = generateQuestionHash(nextChoice.question);
+
+  await questionCollection.updateOne(
+    { _id: pending._id },
+    {
+      $set: {
+        topic: nextChoice.topic,
+        questionText: nextChoice.question,
+        questionType: nextChoice.type,
+        questionHash,
+        choices: remainingChoices,
+      },
+    },
+  );
+
+  return {
+    ...pending,
+    topic: nextChoice.topic,
+    questionText: nextChoice.question,
+    questionType: nextChoice.type,
+    questionHash,
+    choices: remainingChoices,
+    _id: pending._id?.toString(),
+  } as any;
 }
 
 // ============================================================================

@@ -109,9 +109,10 @@ export function SyllabusManager({ subject }: SyllabusManagerProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
+      <Card className="ai-hub-panel rounded-xl p-5 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
+            <p className="ai-hub-kicker mb-2">Syllabus intelligence</p>
             <div className="flex items-center gap-3 mb-3">
               <BookOpen className="w-6 h-6 text-blue-600" />
               <h2 className="text-2xl font-bold">{subject} Syllabus</h2>
@@ -121,7 +122,7 @@ export function SyllabusManager({ subject }: SyllabusManagerProps) {
             </p>
           </div>
 
-          <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <div className="ai-hub-pill rounded-lg px-4 py-3 text-sm">
             <div className="font-semibold">{categories.length} units</div>
             <div>{topicCount} topics</div>
           </div>
@@ -129,7 +130,7 @@ export function SyllabusManager({ subject }: SyllabusManagerProps) {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="p-4">
+        <Card className="ai-hub-stat-card rounded-xl p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Activity className="h-4 w-4 text-blue-600" />
             Practiced
@@ -138,7 +139,7 @@ export function SyllabusManager({ subject }: SyllabusManagerProps) {
             {practicedCount}/{topicCount}
           </p>
         </Card>
-        <Card className="p-4">
+        <Card className="ai-hub-stat-card rounded-xl p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Trophy className="h-4 w-4 text-emerald-600" />
             Complete
@@ -147,7 +148,7 @@ export function SyllabusManager({ subject }: SyllabusManagerProps) {
             {masteredCount}/{topicCount}
           </p>
         </Card>
-        <Card className="p-4">
+        <Card className="ai-hub-stat-card rounded-xl p-4">
           <div className="text-sm font-medium text-muted-foreground">Completion rule</div>
           <p className="mt-2 text-sm text-foreground">
             A topic is full when its average score reaches 8 marks.
@@ -173,7 +174,7 @@ export function SyllabusManager({ subject }: SyllabusManagerProps) {
 
       <div className="grid grid-cols-1 gap-4">
         {categories.map((category) => (
-          <Card key={category.name} className="p-5">
+          <Card key={category.name} className="ai-hub-panel rounded-xl p-5">
             <div className="flex items-start gap-3 mb-4">
               <ListChecks className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
               <div>

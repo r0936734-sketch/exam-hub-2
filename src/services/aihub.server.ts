@@ -14,6 +14,7 @@ import {
   getEvaluationHistory,
   getPendingQuestion,
   deletePendingQuestion,
+  deleteAnsweredPendingQuestion,
 } from "@/server/aihub";
 import { COMPUTER_SCIENCE_SYLLABUS } from "@/server/seed-computer-syllabus";
 import {
@@ -23,6 +24,12 @@ import {
   isGeminiUnavailableError,
 } from "@/server/gemini.server";
 import { getCurrentSessionServerFn } from "@/services/auth.functions";
+
+interface GeneratedQuestionChoice {
+  question: string;
+  type: "theory" | "numerical";
+  topic: string;
+}
 
 type EvaluationProgressStatus = "processing" | "switching" | "completed" | "error";
 
@@ -38,8 +45,8 @@ interface EvaluationProgress {
 const evaluationProgressByRequestId = new Map<string, EvaluationProgress>();
 const EVALUATION_PROGRESS_TTL_MS = 15 * 60 * 1000;
 
-function isValidRequestId(requestId?: string) {
-  return Boolean(requestId && /^[a-zA-Z0-9_-]{8,100}$/.test(requestId));
+function isValidRequestId(requestId?: string): requestId is string {
+  return typeof requestId === "string" && /^[a-zA-Z0-9_-]{8,100}$/.test(requestId);
 }
 
 function cleanupEvaluationProgress() {
@@ -76,6 +83,34 @@ function updateEvaluationProgress(
     notices: patch.notices ?? current.notices,
     updatedAt: now,
   });
+}
+
+function buildQuestionVariantPrompt(
+  customPrompt: string | undefined,
+  variantIndex: number,
+  previousQuestions: string[] = [],
+) {
+  const basePrompt = customPrompt?.trim();
+  const previousQuestionBlock = previousQuestions.length
+    ? `Already generated questions for this click:
+${previousQuestions.map((question, index) => `${index + 1}. ${question}`).join("\n")}
+
+Do NOT generate a paraphrase of any of these. The next question must require a meaningfully different answer, with a different learning objective, command verb, examples/data, or sub-concept inside the same topic.`
+    : "";
+  const variantInstruction =
+    variantIndex === 0
+      ? "Create the strongest primary version of this question."
+      : `Create hidden swap question ${variantIndex + 1}. Keep it related to the same topic/subtopic and marks, but test a different angle so a student cannot reuse the same answer. Examples of valid variation: concept explanation vs application, comparison vs design/use-case, algorithm trace vs complexity, different numerical dataset, different sub-part focus.`;
+
+  return [basePrompt, previousQuestionBlock, variantInstruction].filter(Boolean).join("\n\n");
+}
+
+function isGeneratedQuestionUsable(question: string) {
+  return Boolean(
+    question &&
+      question.trim().length >= 20 &&
+      !question.toLowerCase().includes("unable to generate question"),
+  );
 }
 
 /**
@@ -255,54 +290,112 @@ export const generateQuestionFn = createServerFn({
         return { error: "Topic not found in the built-in syllabus" };
       }
 
-      // Generate question
-      const { question, type, selectedTopic, modelNotices } = await generateQuestion(
-        topic,
-        marks,
-        questionType,
-        {
-          ...context,
-          selectedCategory: selectedCategory?.name,
-          candidateSubtopics,
-        },
-        customPrompt,
-      );
+      const generationContext = {
+        ...context,
+        selectedCategory: selectedCategory?.name,
+        candidateSubtopics,
+      };
+      const generatedChoices: GeneratedQuestionChoice[] = [];
+      const generatedHashes = new Set<string>();
+      let finalModelNotices: string[] = [];
 
-      // Check for duplicates
-      const questionHash = generateQuestionHash(question);
+      const targetChoiceCount = 2;
+      const maxGenerationAttempts = 4;
+
+      for (let i = 0; i < maxGenerationAttempts && generatedChoices.length < targetChoiceCount; i++) {
+        const variantTopic = i === 0 ? topic : generatedChoices[0]?.topic ?? topic;
+        const variantContext =
+          i === 0
+            ? generationContext
+            : {
+                ...context,
+                selectedCategory: selectedCategory?.name,
+                candidateSubtopics: [],
+              };
+        const result = await generateQuestion(
+          variantTopic,
+          marks,
+          questionType,
+          variantContext,
+          buildQuestionVariantPrompt(
+            customPrompt,
+            generatedChoices.length,
+            generatedChoices.map((choice) => choice.question),
+          ),
+        );
+
+        finalModelNotices = [...finalModelNotices, ...result.modelNotices];
+
+        if (!isGeneratedQuestionUsable(result.question)) {
+          continue;
+        }
+
+        const choiceHash = generateQuestionHash(result.question);
+        if (generatedHashes.has(choiceHash)) {
+          continue;
+        }
+
+        generatedHashes.add(choiceHash);
+        generatedChoices.push({
+          question: result.question,
+          type: result.type,
+          topic: result.selectedTopic,
+        });
+      }
+
+      if (generatedChoices.length === 0) {
+        return { error: "Failed to generate question" };
+      }
+
+      // Check the primary stored question for duplicates; alternatives remain response-only.
+      let primaryChoice = generatedChoices[0];
+      const questionHash = generateQuestionHash(primaryChoice.question);
       const isDuplicate = await hasQuestionBeenGenerated(user.id, questionHash);
 
-      let finalQuestion = question;
-      let finalType = type;
-      let finalTopic = selectedTopic;
-      let finalModelNotices = [...modelNotices];
-
       if (isDuplicate) {
-        // Retry if duplicate
         const retry = await generateQuestion(
-          topic,
+          primaryChoice.topic,
           marks,
           questionType,
           {
             ...context,
             selectedCategory: selectedCategory?.name,
-            candidateSubtopics,
+            candidateSubtopics: [],
           },
-          customPrompt,
+          buildQuestionVariantPrompt(
+            customPrompt,
+            generatedChoices.length,
+            generatedChoices.map((choice) => choice.question),
+          ),
         );
-        finalQuestion = retry.question;
-        finalType = retry.type;
-        finalTopic = retry.selectedTopic;
         finalModelNotices = [...finalModelNotices, ...retry.modelNotices];
+
+        if (isGeneratedQuestionUsable(retry.question)) {
+          primaryChoice = {
+            question: retry.question,
+            type: retry.type,
+            topic: retry.selectedTopic,
+          };
+          generatedChoices[0] = primaryChoice;
+        }
       }
 
       // Store generated question
-      await storeGeneratedQuestion(user.id, finalTopic, subject, finalQuestion, marks, finalType);
+      await storeGeneratedQuestion(
+        user.id,
+        primaryChoice.topic,
+        subject,
+        primaryChoice.question,
+        marks,
+        primaryChoice.type,
+        generatedChoices,
+      );
 
       return {
-        question: finalQuestion,
-        type: finalType,
-        topic: finalTopic,
+        question: primaryChoice.question,
+        type: primaryChoice.type,
+        topic: primaryChoice.topic,
+        choices: generatedChoices,
         modelNotices: finalModelNotices,
         marks,
         wordLimit: marks === 8 ? 125 : 200,
@@ -331,6 +424,7 @@ export const evaluateAnswerFn = createServerFn({
   .inputValidator(
     (data: {
       imageUrl: string;
+      imageUrls?: string[];
       questionText: string;
       marks: number;
       topic: string;
@@ -348,20 +442,21 @@ export const evaluateAnswerFn = createServerFn({
       }
 
       const { imageUrl, questionText, marks, topic, subject } = data;
+      const imageUrls = (data.imageUrls?.length ? data.imageUrls : [imageUrl]).filter(Boolean);
 
-      if (!imageUrl || !questionText || ![8, 12].includes(marks)) {
+      if (imageUrls.length === 0 || imageUrls.length > 2 || !questionText || ![8, 12].includes(marks)) {
         return { error: "Invalid request parameters" };
       }
 
       updateEvaluationProgress(requestId, {
         status: "processing",
-        message: "Image received. Preparing it for AI evaluation...",
+        message: `Image${imageUrls.length > 1 ? "s" : ""} received. Preparing for AI evaluation...`,
       });
 
       // Read the handwritten answer, evaluate it, and generate the model answer
       // in one Gemini Vision request to reduce quota usage.
       const { evaluation, modelAnswer, ocrText, modelNotices } = await evaluateAnswerFromImage(
-        imageUrl,
+        imageUrls,
         questionText,
         marks,
         (message) => {
@@ -399,8 +494,12 @@ export const evaluateAnswerFn = createServerFn({
         marks,
       );
 
-      // Delete the pending question after successful evaluation
-      await deletePendingQuestion(user.id, subject);
+      // Keep unanswered variants pending; remove only the question that was evaluated.
+      const pendingQuestion = await deleteAnsweredPendingQuestion(
+        user.id,
+        subject,
+        questionText,
+      );
 
       updateEvaluationProgress(requestId, {
         status: "completed",
@@ -420,6 +519,7 @@ export const evaluateAnswerFn = createServerFn({
         modelAnswer,
         ocrText,
         modelNotices,
+        pendingQuestion,
       };
     } catch (error) {
       console.error("Answer evaluation error:", error);

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Upload, AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, ImagePlus, Loader2, Sparkles, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { evaluateAnswerFn, getEvaluationProgressFn } from "@/services/aihub.server";
 import { LoadingAnimation } from "@/components/LoadingAnimation";
@@ -18,9 +18,20 @@ interface EvaluationProgress {
   notices: string[];
 }
 
+const MAX_EVALUATION_IMAGES = 2;
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [questionText, setQuestionText] = useState("");
   const [marks, setMarks] = useState<8 | 12>(8);
   const [topic, setTopic] = useState("");
@@ -55,30 +66,50 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
     };
   }, [loading, evaluationRequestId]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files ?? []);
+    if (selectedFiles.length === 0) return;
 
-    // Validate file type
-    if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
+    if (selectedFiles.some((file) => !["image/jpeg", "image/png", "image/jpg"].includes(file.type))) {
       setError("Please upload a JPG, PNG, or JPEG image");
+      e.target.value = "";
       return;
     }
 
-    setImageFile(file);
-    setError("");
+    const remainingSlots = MAX_EVALUATION_IMAGES - imageFiles.length;
+    if (remainingSlots <= 0) {
+      setError(`You can upload a maximum of ${MAX_EVALUATION_IMAGES} answer images`);
+      e.target.value = "";
+      return;
+    }
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    const filesToAdd = selectedFiles.slice(0, remainingSlots);
+    if (selectedFiles.length > remainingSlots) {
+      setError(`Only ${MAX_EVALUATION_IMAGES} answer images are allowed. Extra images were ignored.`);
+    } else {
+      setError("");
+    }
+
+    try {
+      const previews = await Promise.all(filesToAdd.map(readFileAsDataUrl));
+      setImageFiles((current) => [...current, ...filesToAdd]);
+      setImagePreviews((current) => [...current, ...previews]);
+    } catch {
+      setError("Failed to process image");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles((current) => current.filter((_, i) => i !== index));
+    setImagePreviews((current) => current.filter((_, i) => i !== index));
+    setError("");
   };
 
   const handleEvaluate = async () => {
-    if (!imageFile || !questionText.trim() || !topic.trim()) {
-      setError("Please provide image, question, and topic");
+    if (imageFiles.length === 0 || !questionText.trim() || !topic.trim()) {
+      setError("Please provide at least one image, question, and topic");
       return;
     }
 
@@ -91,46 +122,35 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
     setEvaluationRequestId(requestId);
     setEvaluationProgress({
       status: "processing",
-      message: "Uploading your answer image to the evaluator...",
+      message: `Uploading your answer image${imageFiles.length > 1 ? "s" : ""} to the evaluator...`,
       notices: [],
     });
 
     try {
-      // Convert image to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const imageUrl = reader.result as string;
+      const imageUrls = await Promise.all(imageFiles.map(readFileAsDataUrl));
+      const data = await evaluateAnswerFn({
+        data: {
+          imageUrl: imageUrls[0],
+          imageUrls,
+          questionText: questionText.trim(),
+          marks,
+          topic: topic.trim(),
+          subject,
+          requestId,
+        },
+      });
 
-        try {
-          const data = await evaluateAnswerFn({
-            data: {
-              imageUrl,
-              questionText: questionText.trim(),
-              marks,
-              topic: topic.trim(),
-              subject,
-              requestId,
-            },
-          });
+      if (data.error) {
+        setError(data.error || "Failed to evaluate answer");
+        return;
+      }
 
-          if (data.error) {
-            setError(data.error || "Failed to evaluate answer");
-            setLoading(false);
-            return;
-          }
-
-          setEvaluation(data);
-          toast.success("Answer evaluated successfully");
-          setError("");
-        } catch (err) {
-          setError("Failed to evaluate answer. Please try again.");
-        } finally {
-          setLoading(false);
-        }
-      };
-      reader.readAsDataURL(imageFile);
+      setEvaluation(data);
+      toast.success("Answer evaluated successfully");
+      setError("");
     } catch (err) {
-      setError("Failed to process image");
+      setError("Failed to evaluate answer. Please try again.");
+    } finally {
       setLoading(false);
     }
   };
@@ -139,8 +159,17 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Evaluate Your Answer</h2>
+      <Card className="ai-hub-panel rounded-xl p-5 sm:p-6">
+        <div className="mb-5">
+          <p className="ai-hub-kicker">
+            <Sparkles className="h-4 w-4" />
+            Answer evaluator
+          </p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight">Evaluate Your Answer</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Upload one or two answer images and get structured examiner feedback.
+          </p>
+        </div>
 
         <div className="space-y-4">
           {/* Question Input */}
@@ -152,7 +181,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
               value={questionText}
               onChange={(e) => setQuestionText(e.target.value)}
               placeholder="Paste the question here..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 h-20"
+              className="h-20 w-full rounded-md border border-primary/25 bg-background/80 px-3 py-2 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={loading}
             />
           </div>
@@ -166,7 +195,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="e.g., Normalization"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-md border border-primary/25 bg-background/80 px-3 py-2 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 disabled={loading}
               />
             </div>
@@ -177,7 +206,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
               <select
                 value={marks}
                 onChange={(e) => setMarks(parseInt(e.target.value) as 8 | 12)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-md border border-primary/25 bg-background/80 px-3 py-2 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 disabled={loading}
               >
                 <option value={8}>8 Marks</option>
@@ -190,7 +219,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Expected Word Limit
               </label>
-              <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
+              <div className="rounded-md border border-border bg-background/60 px-3 py-2">
                 <span className="text-sm font-semibold">{wordLimit} words</span>
               </div>
             </div>
@@ -198,15 +227,21 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
 
           {/* Image Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Handwritten Answer Image
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Handwritten Answer Images
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {imageFiles.length}/{MAX_EVALUATION_IMAGES} uploaded
+              </span>
+            </div>
+            <div className="ai-hub-upload-zone rounded-lg p-6 text-center">
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/jpg"
+                multiple
                 onChange={handleImageSelect}
-                disabled={loading}
+                disabled={loading || imageFiles.length >= MAX_EVALUATION_IMAGES}
                 className="hidden"
                 id="image-upload"
               />
@@ -214,19 +249,38 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                 htmlFor="image-upload"
                 className="cursor-pointer flex flex-col items-center gap-2"
               >
-                <Upload className="w-6 h-6 text-gray-400" />
-                <span className="text-sm text-gray-600">Click to upload or drag and drop</span>
-                <span className="text-xs text-gray-500">JPG, PNG, JPEG (max 5MB)</span>
+                {imageFiles.length === 0 ? (
+                  <Upload className="h-7 w-7 text-primary" />
+                ) : (
+                  <ImagePlus className="h-7 w-7 text-primary" />
+                )}
+                <span className="text-sm text-gray-600">Click to upload or add one more image</span>
+                <span className="text-xs text-gray-500">JPG, PNG, JPEG (max {MAX_EVALUATION_IMAGES} images)</span>
               </label>
             </div>
 
-            {imagePreview && (
-              <div className="mt-4">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="max-w-md max-h-96 rounded border border-gray-200"
-                />
+            {imagePreviews.length > 0 && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {imagePreviews.map((preview, index) => (
+                  <div key={`${preview}-${index}`} className="relative overflow-hidden rounded-lg border border-primary/20 bg-background shadow-sm">
+                    <img
+                      src={preview}
+                      alt={`Answer preview ${index + 1}`}
+                      className="h-52 w-full bg-muted/45 object-contain"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => removeImage(index)}
+                      disabled={loading}
+                      aria-label={`Remove image ${index + 1}`}
+                      className="absolute right-2 top-2 h-8 w-8 bg-background/85"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -253,8 +307,8 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
 
           <Button
             onClick={handleEvaluate}
-            disabled={loading || !imageFile || !questionText.trim()}
-            className="w-full"
+            disabled={loading || imageFiles.length === 0 || !questionText.trim()}
+            className="ai-hub-primary-button w-full"
             size="lg"
           >
             {loading ? (
@@ -263,7 +317,10 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
                 Evaluating...
               </>
             ) : (
-              "Evaluate Answer"
+              <>
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Evaluate Answer
+              </>
             )}
           </Button>
         </div>
@@ -329,7 +386,7 @@ export function AnswerEvaluator({ subject }: AnswerEvaluatorProps) {
 
               {evaluation.feedback.examWritingSuggestions.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-purple-700 mb-2">Exam Writing Suggestions</h4>
+                  <h4 className="font-semibold text-cyan-700 mb-2">Exam Writing Suggestions</h4>
                   <ul className="list-disc list-inside space-y-1">
                     {evaluation.feedback.examWritingSuggestions.map(
                       (suggestion: string, i: number) => (

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import aiBotGif from "../../ai.gif";
 
 interface LoadingAnimationProps {
   isVisible: boolean;
@@ -11,8 +12,8 @@ interface LoadingAnimationProps {
 }
 
 /**
- * Animated loading message component
- * Can display a single message or cycle through multiple messages every 2-3 seconds
+ * Animated loading message component.
+ * Shows progress as a compact AI assistant status bubble.
  */
 export function LoadingAnimation({
   isVisible,
@@ -42,16 +43,25 @@ export function LoadingAnimation({
     }
   }, [isVisible, messages]);
 
-  const colorClasses = {
-    processing: "text-blue-500",
-    success: "text-green-500",
-    error: "text-red-500",
+  const statusLabels = {
+    processing: "Working on your request",
+    success: "Completed",
+    error: "Needs attention",
   };
 
-  const bgClasses = {
-    processing: "bg-blue-50 border-blue-200",
-    success: "bg-green-50 border-green-200",
-    error: "bg-red-50 border-red-200",
+  const frameClasses = {
+    processing:
+      "border-blue-200 bg-blue-50/90 text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/35 dark:text-blue-50",
+    success:
+      "border-green-200 bg-green-50/90 text-green-950 dark:border-green-900/70 dark:bg-green-950/35 dark:text-green-50",
+    error:
+      "border-red-200 bg-red-50/90 text-red-950 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-50",
+  };
+
+  const accentClasses = {
+    processing: "bg-blue-500 shadow-blue-500/30",
+    success: "bg-green-500 shadow-green-500/30",
+    error: "bg-red-500 shadow-red-500/30",
   };
 
   // Determine which message to display
@@ -65,33 +75,52 @@ export function LoadingAnimation({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.3 }}
-          className={`rounded-lg border p-3 ${bgClasses[variant]}`}
+          className={`overflow-hidden rounded-xl border p-3 shadow-sm sm:p-4 ${frameClasses[variant]}`}
         >
-          <div className={`flex items-center gap-3 text-sm ${colorClasses[variant]}`}>
-            {icon ? (
-              <span className="text-lg">{icon}</span>
-            ) : (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-                className="h-5 w-5 rounded-full border-2 border-current border-t-transparent"
+          <div className="flex min-w-0 items-start gap-3 sm:items-center">
+            <div className="relative h-14 w-14 shrink-0 rounded-xl border border-current/10 bg-white/70 p-1.5 shadow-sm dark:bg-slate-950/30 sm:h-16 sm:w-16">
+              <img
+                src={aiBotGif}
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-contain"
               />
-            )}
-            <div className="flex-1 min-h-[20px]">
+              <span
+                className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full shadow-lg ${accentClasses[variant]}`}
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide opacity-70">
+                  {statusLabels[variant]}
+                </span>
+                {icon && <span className="text-sm leading-none">{icon}</span>}
+              </div>
               <motion.span
                 key={currentMessageIndex}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="font-medium inline-block"
+                className="block break-words text-sm font-medium leading-6 sm:text-base"
               >
                 {displayMessage}
               </motion.span>
+
+              {variant === "processing" && (
+                <div className="mt-3 h-1 overflow-hidden rounded-full bg-current/10">
+                  <motion.div
+                    className="h-full w-1/3 rounded-full bg-current/55"
+                    animate={{ x: ["-120%", "320%"] }}
+                    transition={{
+                      duration: 1.6,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

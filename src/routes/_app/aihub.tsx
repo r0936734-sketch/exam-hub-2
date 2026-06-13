@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_app/aihub")({
 
 function AIHubPage() {
   return (
-    <div className="min-h-screen bg-background py-8 text-foreground">
+    <div className="ai-hub-shell min-h-screen py-6 text-foreground sm:py-8">
       <AIHubAccess />
     </div>
   );
