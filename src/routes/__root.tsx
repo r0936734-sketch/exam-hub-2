@@ -136,6 +136,16 @@ function RootComponent() {
     }
   }, []);
 
+  // Keep-alive ping to prevent Render free-tier dyno from sleeping
+  // while the user is actively on the page.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch("/api/ping").catch(() => {});
+    }, 4 * 60 * 1000); // every 4 minutes
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminLoginRouteImport } from './routes/admin-login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPingRouteImport } from './routes/api/ping'
 import { Route as AppTestsRouteImport } from './routes/_app/tests'
 import { Route as AppSyllabusRouteImport } from './routes/_app/syllabus'
 import { Route as AppSubmissionsRouteImport } from './routes/_app/submissions'
@@ -46,6 +47,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPingRoute = ApiPingRouteImport.update({
+  id: '/api/ping',
+  path: '/api/ping',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppTestsRoute = AppTestsRouteImport.update({
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/submissions': typeof AppSubmissionsRoute
   '/syllabus': typeof AppSyllabusRoute
   '/tests': typeof AppTestsRouteWithChildren
+  '/api/ping': typeof ApiPingRoute
   '/admin/dashboard': typeof AppAdminDashboardRoute
   '/admin/notices': typeof AppAdminNoticesRoute
   '/admin/submissions': typeof AppAdminSubmissionsRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/submissions': typeof AppSubmissionsRoute
   '/syllabus': typeof AppSyllabusRoute
   '/tests': typeof AppTestsRouteWithChildren
+  '/api/ping': typeof ApiPingRoute
   '/admin/dashboard': typeof AppAdminDashboardRoute
   '/admin/notices': typeof AppAdminNoticesRoute
   '/admin/submissions': typeof AppAdminSubmissionsRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/_app/submissions': typeof AppSubmissionsRoute
   '/_app/syllabus': typeof AppSyllabusRoute
   '/_app/tests': typeof AppTestsRouteWithChildren
+  '/api/ping': typeof ApiPingRoute
   '/_app/admin/dashboard': typeof AppAdminDashboardRoute
   '/_app/admin/notices': typeof AppAdminNoticesRoute
   '/_app/admin/submissions': typeof AppAdminSubmissionsRoute
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/syllabus'
     | '/tests'
+    | '/api/ping'
     | '/admin/dashboard'
     | '/admin/notices'
     | '/admin/submissions'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/submissions'
     | '/syllabus'
     | '/tests'
+    | '/api/ping'
     | '/admin/dashboard'
     | '/admin/notices'
     | '/admin/submissions'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_app/submissions'
     | '/_app/syllabus'
     | '/_app/tests'
+    | '/api/ping'
     | '/_app/admin/dashboard'
     | '/_app/admin/notices'
     | '/_app/admin/submissions'
@@ -255,6 +267,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
   LoginRoute: typeof LoginRoute
+  ApiPingRoute: typeof ApiPingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ping': {
+      id: '/api/ping'
+      path: '/api/ping'
+      fullPath: '/api/ping'
+      preLoaderRoute: typeof ApiPingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/tests': {
@@ -458,6 +478,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
   LoginRoute: LoginRoute,
+  ApiPingRoute: ApiPingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
