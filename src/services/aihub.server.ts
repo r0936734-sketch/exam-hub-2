@@ -24,6 +24,20 @@ import {
   isGeminiUnavailableError,
 } from "@/server/gemini.server";
 import { getCurrentSessionServerFn } from "@/services/auth.functions";
+import { connectToDatabase } from "@/server/db";
+import { getLeaderboardFromProgress } from "@/server/user";
+
+// AI Hub specific leaderboard: only users present in `user_progress`
+export const getAIHubLeaderboardFn = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const db = await connectToDatabase();
+    const leaderboard = await getLeaderboardFromProgress(db, undefined, 100);
+    return { leaderboard };
+  } catch (error) {
+    console.error("AI Hub leaderboard error:", error);
+    return { error: "Failed to load AI Hub leaderboard", leaderboard: [] } as any;
+  }
+});
 
 interface GeneratedQuestionChoice {
   question: string;
