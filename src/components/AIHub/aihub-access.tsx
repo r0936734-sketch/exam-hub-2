@@ -110,7 +110,6 @@ function NeuralCanvas({ size = 180 }: { size?: number }) {
     };
     const fireInterval = setInterval(firePulse, 280);
 
-<<<<<<< HEAD
     /* Helpers: build CSS color strings with alpha, and normalize --primary */
     const colorWithAlpha = (base: string, alpha: number) => {
       const a = Number.isFinite(alpha) ? alpha : Number(alpha);
@@ -146,20 +145,6 @@ function NeuralCanvas({ size = 180 }: { size?: number }) {
         primaryMid: colorWithAlpha(primaryBase, 0.55),
       };
     };
-=======
-    /* Derive theme colours from CSS variables at draw time */
-    const getColors = () => {
-  const primary = getComputedStyle(document.documentElement)
-    .getPropertyValue("--primary")
-    .trim();
-
-  return {
-    primary,
-    primaryFaint: primary,
-    primaryMid: primary,
-  };
-};
->>>>>>> d00810bb4ababc29cfd79f61697d5b53c8eacc72
 
     let raf: number;
     const draw = () => {
@@ -199,36 +184,13 @@ function NeuralCanvas({ size = 180 }: { size?: number }) {
         const pulse = 0.5 + 0.5 * Math.sin(t * n.speed + n.phase);
 
         /* Glow ring */
-<<<<<<< HEAD
-        const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3.5);
-        gr.addColorStop(0, colorWithAlpha(c.primaryBase, 0.25 * pulse));
-        gr.addColorStop(1, "transparent");
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r * 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = gr;
-        ctx.fill();
-=======
-        const primary = getComputedStyle(document.documentElement)
-  .getPropertyValue("--primary")
-  .trim();
-
-const gr = ctx.createRadialGradient(
-  n.x,
-  n.y,
-  0,
-  n.x,
-  n.y,
-  n.r * 3.5
-);
-
-gr.addColorStop(0, primary);
-gr.addColorStop(1, "transparent");
-
-ctx.beginPath();
-ctx.arc(n.x, n.y, n.r * 3.5, 0, Math.PI * 2);
-ctx.fillStyle = gr;
-ctx.fill();
->>>>>>> d00810bb4ababc29cfd79f61697d5b53c8eacc72
+  const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3.5);
+  gr.addColorStop(0, colorWithAlpha(c.primaryBase, 0.25 * pulse));
+  gr.addColorStop(1, "transparent");
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, n.r * 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = gr;
+  ctx.fill();
 
         /* Core dot */
         ctx.beginPath();
@@ -397,21 +359,7 @@ export function AIHubAccess() {
                 </div>
               </div>
 
-<<<<<<< HEAD
               {/* Live dot removed by request */}
-=======
-              {/* Live dot */}
-              <span
-                className="hub-pulse"
-                style={{
-                  position: "absolute", top: 14, right: 14,
-                  width: 10, height: 10, borderRadius: "50%",
-                  background: "#22c55e",
-                  border: "2px solid hsl(var(--background))",
-                  zIndex: 11,
-                }}
-              />
->>>>>>> d00810bb4ababc29cfd79f61697d5b53c8eacc72
             </div>
           </div>
 
