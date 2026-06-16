@@ -12,6 +12,7 @@ import {
   generateQuestionHash,
   storeEvaluation,
   getEvaluationHistory,
+  getAIHubLeaderboard,
   getPendingQuestion,
   deletePendingQuestion,
   deleteAnsweredPendingQuestion,
@@ -108,8 +109,8 @@ Do NOT generate a paraphrase of any of these. The next question must require a m
 function isGeneratedQuestionUsable(question: string) {
   return Boolean(
     question &&
-      question.trim().length >= 20 &&
-      !question.toLowerCase().includes("unable to generate question"),
+    question.trim().length >= 20 &&
+    !question.toLowerCase().includes("unable to generate question"),
   );
 }
 
@@ -209,7 +210,7 @@ export const verifyAIHubPasscodeFn = createServerFn({
 
       // Use rate-limited verification
       const result = await verifyAIHubPasscodeWithRateLimit(user.id, passcode);
-      
+
       if (!result.verified) {
         return { error: result.message || "Invalid passcode", verified: false };
       }
@@ -229,7 +230,6 @@ export const verifyAIHubPasscodeFn = createServerFn({
       return { error: "Failed to verify passcode", verified: false };
     }
   });
-  
 
 /**
  * Generate a new university-style question
@@ -266,10 +266,8 @@ export const generateQuestionFn = createServerFn({
       const selectedCategory = categoryName
         ? syllabusCategories.find((category) => category.name === categoryName)
         : syllabusCategories.find((category) => category.subtopics.includes(topic));
-      const isAutoSubtopicSelection = Boolean(
-        selectedCategory && topic === selectedCategory.name,
-      );
-      const candidateSubtopics = isAutoSubtopicSelection ? selectedCategory?.subtopics ?? [] : [];
+      const isAutoSubtopicSelection = Boolean(selectedCategory && topic === selectedCategory.name);
+      const candidateSubtopics = isAutoSubtopicSelection ? (selectedCategory?.subtopics ?? []) : [];
 
       // Get user's progress for personalization
       const progress = await getUserProgress(user.id, subject);
@@ -286,7 +284,11 @@ export const generateQuestionFn = createServerFn({
 
       // Check built-in syllabus topics
       const syllabusTopics = getBuiltInSyllabusTopics(subject);
-      if (syllabusTopics.length > 0 && !syllabusTopics.includes(topic) && !isAutoSubtopicSelection) {
+      if (
+        syllabusTopics.length > 0 &&
+        !syllabusTopics.includes(topic) &&
+        !isAutoSubtopicSelection
+      ) {
         return { error: "Topic not found in the built-in syllabus" };
       }
 
@@ -302,8 +304,12 @@ export const generateQuestionFn = createServerFn({
       const targetChoiceCount = 2;
       const maxGenerationAttempts = 4;
 
-      for (let i = 0; i < maxGenerationAttempts && generatedChoices.length < targetChoiceCount; i++) {
-        const variantTopic = i === 0 ? topic : generatedChoices[0]?.topic ?? topic;
+      for (
+        let i = 0;
+        i < maxGenerationAttempts && generatedChoices.length < targetChoiceCount;
+        i++
+      ) {
+        const variantTopic = i === 0 ? topic : (generatedChoices[0]?.topic ?? topic);
         const variantContext =
           i === 0
             ? generationContext
@@ -444,7 +450,12 @@ export const evaluateAnswerFn = createServerFn({
       const { imageUrl, questionText, marks, topic, subject } = data;
       const imageUrls = (data.imageUrls?.length ? data.imageUrls : [imageUrl]).filter(Boolean);
 
-      if (imageUrls.length === 0 || imageUrls.length > 2 || !questionText || ![8, 12].includes(marks)) {
+      if (
+        imageUrls.length === 0 ||
+        imageUrls.length > 2 ||
+        !questionText ||
+        ![8, 12].includes(marks)
+      ) {
         return { error: "Invalid request parameters" };
       }
 
@@ -467,8 +478,7 @@ export const evaluateAnswerFn = createServerFn({
           };
 
           if (isFallbackNotice && isValidRequestId(requestId)) {
-            const currentNotices =
-              evaluationProgressByRequestId.get(requestId)?.notices ?? [];
+            const currentNotices = evaluationProgressByRequestId.get(requestId)?.notices ?? [];
             progressPatch.notices = [...currentNotices, message];
           }
 
@@ -486,20 +496,10 @@ export const evaluateAnswerFn = createServerFn({
       await updateTopicProgress(user.id, subject, topic, evaluation.score, marks);
 
       // Store evaluation (only essential data for optimization)
-      await storeEvaluation(
-        user.id,
-        topic,
-        subject,
-        evaluation.score,
-        marks,
-      );
+      await storeEvaluation(user.id, topic, subject, evaluation.score, marks);
 
       // Keep unanswered variants pending; remove only the question that was evaluated.
-      const pendingQuestion = await deleteAnsweredPendingQuestion(
-        user.id,
-        subject,
-        questionText,
-      );
+      const pendingQuestion = await deleteAnsweredPendingQuestion(user.id, subject, questionText);
 
       updateEvaluationProgress(requestId, {
         status: "completed",
@@ -556,14 +556,12 @@ export const getUserProgressFn = createServerFn({
       }
 
       const progress = await getUserProgress(user.id, subject);
-      
+
       // Convert Map to array and calculate stats
       const topicProgressArray = Array.from(progress.topicProgress.values());
       const totalAttempts = progress.overallAttempts;
       const topicsCovered = topicProgressArray.length;
-      const weakTopics = topicProgressArray.filter(
-        (tp) => (tp.lastScore / 12) * 100 < 50
-      ).length;
+      const weakTopics = topicProgressArray.filter((tp) => (tp.lastScore / 12) * 100 < 50).length;
 
       return {
         userId: progress.userId,
@@ -621,6 +619,28 @@ export const getEvaluationHistoryFn = createServerFn({
   } catch (error) {
     console.error("History fetch error:", error);
     return { error: "Failed to fetch history", history: [] };
+  }
+});
+
+export const getAIHubLeaderboardFn = createServerFn({
+  method: "POST",
+}).handler(async () => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { error: "Unauthorized", leaderboard: [] };
+    }
+
+    const enabled = await isAIHubEnabled(user.id);
+    if (!enabled) {
+      return { error: "Access disabled", leaderboard: [] };
+    }
+
+    const leaderboard = await getAIHubLeaderboard(100);
+    return { leaderboard };
+  } catch (error) {
+    console.error("AI Hub leaderboard fetch error:", error);
+    return { error: "Failed to fetch AI Hub leaderboard", leaderboard: [] };
   }
 });
 
