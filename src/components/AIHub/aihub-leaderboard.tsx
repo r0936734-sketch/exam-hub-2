@@ -319,10 +319,17 @@ export function AIHubLeaderboard() {
     let cancelled = false;
     (async () => {
       try {
+<<<<<<< HEAD
         const result = (await getAIHubLeaderboardFn()) as any;
         if (cancelled) return;
         if (result?.error) { setError(result.error); return; }
         setLeaderboard(result?.leaderboard || []);
+=======
+        const result = await getAIHubLeaderboardFn();
+        if (cancelled) return;
+        if (result.error) { setError(result.error); return; }
+        setLeaderboard(result.leaderboard || []);
+>>>>>>> d00810bb4ababc29cfd79f61697d5b53c8eacc72
       } catch {
         if (!cancelled) setError("Failed to load leaderboard");
       } finally {
