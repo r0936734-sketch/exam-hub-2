@@ -109,7 +109,7 @@ export function AIHubAccess() {
             AI Hub access
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Your AI study desk is invite-only for now.
+            AI hub is currently locked for you now.
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
             AI Hub gives selected students question generation, handwritten answer evaluation, model answers, and progress tracking in one protected workspace.
