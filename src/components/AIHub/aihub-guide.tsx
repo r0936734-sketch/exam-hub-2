@@ -9,7 +9,7 @@ type GuideMode = "locked" | "active" | "gate";
 
 const lockedQuestions = [
   {
-    question: "Can AI Hub solve my study doubts?",
+    question: "Can AI Hub solve your study doubts?",
     answer:
       "It is built for exam practice: generated questions, answer checking, model answers, and topic-wise improvement hints.",
   },
