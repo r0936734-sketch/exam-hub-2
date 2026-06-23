@@ -128,6 +128,10 @@ function PodiumCard({
         }}
       >
         {row.name}
+        <br />
+        <span style={{ fontSize: 10, color: "var(--muted-foreground)", fontWeight: 500 }}>
+          {row.submissions} sub
+        </span>
       </p>
 
       {/* Score */}

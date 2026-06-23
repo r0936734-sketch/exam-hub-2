@@ -76,6 +76,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const [marks, setMarks] = useState<8 | 12>(8);
   const [questionType, setQuestionType] = useState<"theory" | "numerical" | "auto">("auto");
   const [customPrompt, setCustomPrompt] = useState("");
+  const [includeProgressive, setIncludeProgressive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [question, setQuestion] = useState<{
@@ -234,6 +235,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           questionType,
           subject,
           customPrompt: customPrompt.trim(),
+          includeProgressiveSubtopic: includeProgressive,
         },
       });
 
@@ -494,7 +496,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
         </div>
 
         {/* Question Settings */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Marks</label>
             <select
@@ -528,6 +530,25 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               <span className="text-sm font-semibold text-gray-900 dark:text-white">{wordLimit} words</span>
             </div>
           </div>
+        </div>
+
+        {/* Progressive subtopic option */}
+        <div className="mb-4">
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeProgressive}
+              onChange={(e) => setIncludeProgressive(e.target.checked)}
+              disabled={loading || !selectedCategory.trim()}
+              className="form-checkbox h-4 w-4 text-primary"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300 ml-2">
+              Also generate a second question from an AI-chosen subtopic (progressive)
+            </span>
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+            When enabled, AI will generate a second related question from a subtopic within the selected category.
+          </p>
         </div>
 
         {/* Custom Prompt */}

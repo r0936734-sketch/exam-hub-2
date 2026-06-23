@@ -247,6 +247,7 @@ export const generateQuestionFn = createServerFn({
       questionType: "theory" | "numerical" | "auto";
       subject: string;
       customPrompt?: string;
+      includeProgressiveSubtopic?: boolean;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -256,7 +257,7 @@ export const generateQuestionFn = createServerFn({
         return { error: "Unauthorized" };
       }
 
-      const { topic, categoryName, marks, questionType, subject, customPrompt } = data;
+      const { topic, categoryName, marks, questionType, subject, customPrompt, includeProgressiveSubtopic } = data;
 
       // Validation
       if (!topic || ![8, 12].includes(marks) || !questionType || !subject) {
@@ -310,7 +311,18 @@ export const generateQuestionFn = createServerFn({
         i < maxGenerationAttempts && generatedChoices.length < targetChoiceCount;
         i++
       ) {
-        const variantTopic = i === 0 ? topic : (generatedChoices[0]?.topic ?? topic);
+        // For the second variant, optionally pick a progressive subtopic from candidateSubtopics
+        let variantTopic: string;
+        if (i === 0) {
+          variantTopic = topic;
+        } else if (i === 1 && includeProgressiveSubtopic && generationContext.candidateSubtopics?.length) {
+          // choose a candidate subtopic different from the main topic
+          const candidates = generationContext.candidateSubtopics.filter((s: string) => s !== topic);
+          variantTopic = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : (generatedChoices[0]?.topic ?? topic);
+        } else {
+          variantTopic = generatedChoices[0]?.topic ?? topic;
+        }
+
         const variantContext =
           i === 0
             ? generationContext
