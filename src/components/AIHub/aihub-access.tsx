@@ -1,100 +1,69 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, KeyRound, Loader2, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Loader2, LockKeyhole, Sparkles, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { AIHubMain } from "./aihub-main";
-import { AIHubGuide } from "./aihub-guide";
-import {
-  getAIHubAccessStatusFn,
-  verifyAIHubPasscodeFn,
-} from "@/services/aihub.server";
+import { getAIHubAccessStatusFn, verifyAIHubPasscodeFn } from "@/services/aihub.server";
+
+const css = `
+.hub-shimmer { background-clip: text; -webkit-text-fill-color: transparent; }
+.hub-pulse  { animation: _pulse-ring 2.6s ease-out infinite; }
+.hub-float  { animation: _float 3.8s ease-in-out infinite; }
+.hub-fadeup { animation: _fadeup .3s ease both; }
+`;
 
 export function AIHubAccess() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [accessStatus, setAccessStatus] = useState<{
-    enabled: boolean;
-    requiresPasscode: boolean;
-  } | null>(null);
+
+  const [accessStatus, setAccessStatus] = useState<{ enabled: boolean; requiresPasscode: boolean } | null>(null);
   const [passcode, setPasscode] = useState("");
   const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [checkingAccess, setCheckingAccess] = useState(true);
-  const [showPasscode, setShowPasscode] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [showPass, setShowPass] = useState(false);
 
   useEffect(() => {
-    const checkAccess = async () => {
+    const go = async () => {
       try {
-        const data = await getAIHubAccessStatusFn();
-        if (data.error) {
-          setError(data.error);
-          setCheckingAccess(false);
-          return;
-        }
-
-        setAccessStatus({
-          enabled: data.enabled,
-          requiresPasscode: data.requiresPasscode ?? false,
-        });
-
-        if (!data.enabled) {
-          setError("This section is available only to selected users.");
-        }
-      } catch (err) {
-        setError("Failed to check access status");
-      } finally {
-        setCheckingAccess(false);
-      }
+        const d = await getAIHubAccessStatusFn();
+        if (d.error) { setError(d.error); return; }
+        setAccessStatus({ enabled: d.enabled, requiresPasscode: d.requiresPasscode ?? false });
+        if (!d.enabled) setError("This section is available only to selected users.");
+      } catch { setError("Failed to check access status"); }
+      finally { setChecking(false); }
     };
-
-    if (user) {
-      checkAccess();
-    } else {
-      navigate({ to: "/login" });
-    }
+    if (user) go(); else navigate({ to: "/login" });
   }, [user, navigate]);
 
-  const handleVerifyPasscode = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-
+    setLoading(true); setError("");
     try {
-      const trimmedPasscode = passcode.trim();
-      const data = await verifyAIHubPasscodeFn({
-        data: { passcode: trimmedPasscode },
-      });
-
-      if (data.error) {
-        setError(data.error || "Invalid passcode");
-        return;
-      }
-
-      if (!data.token) {
-        setError("Passcode verified, but no access token was returned");
-        return;
-      }
-
-      sessionStorage.setItem("aihub_token", data.token);
+      const d = await verifyAIHubPasscodeFn({ data: { passcode: passcode.trim() } });
+      if (d.error) { setError(d.error || "Invalid passcode"); return; }
+      if (!d.token) { setError("Passcode verified, but no token returned"); return; }
+      sessionStorage.setItem("aihub_token", d.token);
       setVerified(true);
-    } catch (err) {
-      setError("Failed to verify passcode");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Failed to verify passcode"); }
+    finally { setLoading(false); }
   };
 
-  if (checkingAccess) {
+  if (checking) {
     return (
-      <div className="ai-hub-container flex min-h-[60vh] items-center justify-center px-4">
-        <div className="ai-hub-panel rounded-xl px-6 py-5 text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="mt-3 text-sm font-medium text-muted-foreground">Checking AI Hub access...</p>
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <style>{css}</style>
+        <div className="flex flex-col items-center gap-3">
+          <div className="hub-pulse h-12 w-12 rounded-full border-2 border-primary/40 bg-primary/10 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+          <p className="text-sm text-muted-foreground">Checking access…</p>
         </div>
       </div>
     );
@@ -102,139 +71,123 @@ export function AIHubAccess() {
 
   if (!accessStatus?.enabled) {
     return (
-      <div className="ai-hub-container mx-auto max-w-5xl px-4 pb-10">
-        <section className="ai-hub-hero mb-6 rounded-xl p-5 sm:p-7">
-          <p className="ai-hub-kicker">
-            <LockKeyhole className="h-4 w-4" />
-            AI Hub access
-          </p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
-            AI hub is currently locked for you now.
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-            AI Hub gives selected students question generation, handwritten answer evaluation, model answers, and progress tracking in one protected workspace.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2 text-xs font-medium">
-            <span className="ai-hub-pill">
-              <Sparkles className="h-3.5 w-3.5" />
-              Exam practice AI
-            </span>
-            <span className="ai-hub-pill">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Limited access
-            </span>
+      <div className="flex min-h-[70vh] items-center justify-center px-4">
+        <style>{css}</style>
+        <div className="mx-auto max-w-sm w-full space-y-6 text-center hub-fadeup">
+          <div className="hub-float mx-auto h-16 w-16 rounded-2xl border border-primary/20 bg-primary/8 flex items-center justify-center">
+            <LockKeyhole className="h-7 w-7 text-primary" />
           </div>
-        </section>
-
-        <AIHubGuide mode="locked" />
+          <div>
+            <h1 className="text-2xl font-bold">Invite-only for now</h1>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              AI Hub is available to selected students. Contact your instructor to request access.
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-card/60 p-4 text-left space-y-2.5">
+            {["AI question generation", "Handwritten answer evaluation", "Topic-wise progress tracking", "Syllabus coverage map"].map(f => (
+              <div key={f} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" />
+                {f}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (verified) {
-    return <AIHubMain />;
-  }
+  if (verified) return <AIHubMain />;
 
   return (
-    <div className="ai-hub-container mx-auto max-w-5xl px-4 pb-10">
-      <section className="ai-hub-hero mb-6 rounded-xl p-5 sm:p-7">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="ai-hub-kicker">
-              <Sparkles className="h-4 w-4" />
-              AI Hub secure entry
-            </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-5xl">
-              Unlock your AI preparation console.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Enter your personal passcode to open question generation, answer evaluation, progress, and syllabus intelligence.
-            </p>
-          </div>
-          <div className="ai-hub-pill w-fit text-xs font-medium">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Browser session protected
-          </div>
-        </div>
-      </section>
+    <div className="min-h-[100dvh] flex flex-col">
+      <style>{css}</style>
 
-      <div className="grid gap-4 md:grid-cols-[0.82fr_1fr] md:items-stretch">
-        <AIHubGuide mode="gate" />
+      <div className="border-b border-border/50 bg-card/40 backdrop-blur px-4 py-2.5 flex items-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-primary" />
+        <span className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
+          AI Hub · Secure Entry
+        </span>
+      </div>
 
-        <Card className="ai-hub-panel ai-guide-card rounded-xl p-5 sm:p-6">
-          <div className="mb-5">
-            <p className="ai-hub-kicker">
-              <KeyRound className="h-4 w-4" />
-              Passcode required
-            </p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight">AI Hub Access</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Enter your personal passcode to start a protected AI Hub session.
-            </p>
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+        <div className="hub-fadeup w-full max-w-sm space-y-6">
+
+          <div className="flex justify-center">
+            <div className="hub-float hub-pulse relative rounded-full h-44 w-44 bg-primary/6 border border-primary/10 flex items-center justify-center">
+              <LockKeyhole className="h-10 w-10 text-primary" />
+            </div>
+          </div>
+
+          <div className="text-center space-y-1.5">
+            <h1 className="hub-shimmer text-2xl font-bold tracking-tight sm:text-3xl">AI Study Console</h1>
+            <p className="text-sm text-muted-foreground">Enter your passcode to open your workspace</p>
           </div>
 
           {error && (
-            <Alert className="mb-4 border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
-              <AlertDescription className="text-sm text-red-800 dark:text-red-300">
-                {error}
-              </AlertDescription>
+            <Alert className="border-destructive/40 bg-destructive/8 py-2.5">
+              <AlertDescription className="text-sm text-destructive">{error}</AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleVerifyPasscode}>
-            <div className="mb-4">
-              <label className="mb-2 block text-sm font-medium text-foreground">
-                Access key
-              </label>
-              <div className="relative">
-                <Input
-                  type={showPasscode ? "text" : "password"}
-                  placeholder="Enter passcode"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  disabled={loading}
-                  className="h-12 border-primary/25 bg-background/80 pr-10 text-center text-base tracking-widest focus-visible:ring-primary sm:text-lg"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasscode(!showPasscode)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
-                  disabled={loading}
-                >
-                  {showPasscode ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="relative">
+              <Input
+                type={showPass ? "text" : "password"}
+                placeholder="Enter passcode"
+                value={passcode}
+                onChange={e => setPasscode(e.target.value)}
+                disabled={loading}
+                autoFocus
+                className="h-12 pr-11 text-center text-base tracking-[0.35em] font-mono border-border/70 bg-background/80 focus-visible:ring-primary/40 focus-visible:border-primary/60 rounded-xl"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(v => !v)}
+                disabled={loading}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                aria-label={showPass ? "Hide passcode" : "Show passcode"}
+              >
+                {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
 
             <Button
               type="submit"
-              disabled={loading || !passcode}
-              className="ai-hub-primary-button ai-guide-unlock-button h-12 w-full"
+              disabled={loading || !passcode.trim()}
+              className="h-12 w-full rounded-xl font-semibold text-sm tracking-wide bg-primary hover:bg-primary/90 transition-all active:scale-[.98]"
             >
               {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Unlock AI Hub"
-              )}
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verifying…
+                </span>
+              ) : "Unlock AI Hub →"}
             </Button>
           </form>
 
-          <div className="mt-4 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-            <div className="rounded-md border border-border bg-background/55 p-3">
-              Session token stays in this browser session.
-            </div>
-            <div className="rounded-md border border-border bg-background/55 p-3">
-              Evaluation data is saved only after you submit an answer.
-            </div>
+          <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+            <div className="rounded-lg border border-border/50 bg-card/50 px-3 py-2.5 leading-snug">🔒 Session token stays in this browser only</div>
+            <div className="rounded-lg border border-border/50 bg-card/50 px-3 py-2.5 leading-snug">📊 Progress saved only after you submit</div>
           </div>
-        </Card>
+
+          <details className="group rounded-xl border border-border/40 bg-card/40">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium select-none">
+              <span>What's inside?</span>
+              <span className="text-muted-foreground transition-transform group-open:rotate-180">▾</span>
+            </summary>
+            <div className="px-4 pb-4 pt-1 grid grid-cols-2 gap-2">
+              {[
+                { icon: "🎯", label: "Generate questions" },
+                { icon: "📷", label: "Evaluate answers" },
+                { icon: "📈", label: "Track progress" },
+                { icon: "📚", label: "Syllabus map" },
+              ].map(({ icon, label }) => (
+                <div key={label} className="flex items-center gap-2 text-xs text-muted-foreground"><span>{icon}</span><span>{label}</span></div>
+              ))}
+            </div>
+          </details>
+
+        </div>
       </div>
     </div>
   );

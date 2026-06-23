@@ -254,6 +254,50 @@ export async function getLeaderboard(
     );
 }
 
+  /**
+   * Leaderboard based on `user_progress` collection.
+   * Shows only users who have progress records (AI Hub users).
+   */
+  export async function getLeaderboardFromProgress(
+    db: Db,
+    subject?: string,
+    limit: number = 100,
+  ): Promise<
+    Array<{
+      userId: string;
+      name: string;
+      avgMarks: number;
+      submissions: number;
+    }>
+  > {
+    const filter: any = {};
+    if (subject) filter.subject = subject;
+
+    // Sort by overallAverageScore descending, then overallAttempts desc
+    const rows = await db
+      .collection("user_progress")
+      .find(filter)
+      .sort({ overallAverageScore: -1, overallAttempts: -1 })
+      .limit(limit)
+      .toArray();
+
+    // Fetch names for these userIds
+    const ids = rows.map((r: any) => r.userId);
+    const users = await db
+      .collection("users")
+      .find({ userId: { $in: ids } })
+      .project<{ userId: string; name: string }>({ userId: 1, name: 1, _id: 0 })
+      .toArray();
+    const nameById = new Map(users.map((u) => [u.userId, u.name]));
+
+    return rows.map((r: any) => ({
+      userId: r.userId,
+      name: nameById.get(r.userId) ?? r.userId,
+      avgMarks: typeof r.overallAverageScore === "number" ? r.overallAverageScore : 0,
+      submissions: typeof r.overallAttempts === "number" ? r.overallAttempts : 0,
+    }));
+  }
+
 export async function updateUserAvgMarks(
   db: Db,
   userId: string,

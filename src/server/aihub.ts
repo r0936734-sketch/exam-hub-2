@@ -83,6 +83,13 @@ export interface EvaluationHistory {
   evaluatedAt: Date;
 }
 
+export interface AIHubLeaderboardEntry {
+  userId: string;
+  name: string;
+  avgMarks: number;
+  submissions: number;
+}
+
 export interface GeneratedQuestion {
   _id?: ObjectId;
   userId: string;
@@ -162,10 +169,7 @@ export async function markAIHubPassReceived(userId: string): Promise<void> {
  * Verify AI Hub passcode
  * Secure comparison using bcrypt
  */
-export async function verifyAIHubPasscode(
-  userId: string,
-  passcode: string,
-): Promise<boolean> {
+export async function verifyAIHubPasscode(userId: string, passcode: string): Promise<boolean> {
   if (!passcode) {
     return false;
   }
@@ -174,7 +178,7 @@ export async function verifyAIHubPasscode(
   const usersCollection = db.collection<AIHubUser>("aihub_users");
 
   const user = await usersCollection.findOne({ userId });
-  
+
   if (!user) {
     return false;
   }
@@ -191,7 +195,10 @@ export async function verifyAIHubPasscode(
     const result = await bcrypt.compare(passcodeStr, hashStr);
     return result;
   } catch (err) {
-    console.error("[Auth] Passcode verification error:", err instanceof Error ? err.message : String(err));
+    console.error(
+      "[Auth] Passcode verification error:",
+      err instanceof Error ? err.message : String(err),
+    );
     return false;
   }
 }
@@ -200,10 +207,7 @@ export async function verifyAIHubPasscode(
  * Set AI Hub passcode (admin only)
  * Hash using bcrypt before storing
  */
-export async function setAIHubPasscode(
-  userId: string,
-  plainPasscode: string,
-): Promise<void> {
+export async function setAIHubPasscode(userId: string, plainPasscode: string): Promise<void> {
   const db = await connectToDatabase();
   const usersCollection = db.collection<AIHubUser>("aihub_users");
 
@@ -225,10 +229,7 @@ export async function setAIHubPasscode(
 /**
  * Enable/Disable AI Hub for a user (admin only)
  */
-export async function setAIHubAccess(
-  userId: string,
-  enabled: boolean,
-): Promise<void> {
+export async function setAIHubAccess(userId: string, enabled: boolean): Promise<void> {
   const db = await connectToDatabase();
   const usersCollection = db.collection<AIHubUser>("aihub_users");
 
@@ -285,18 +286,14 @@ export async function createAIHubUserSecure(
   const db = await connectToDatabase();
 
   // Verify student exists
-  const student = await db
-    .collection("users")
-    .findOne({ userId: studentUserId, role: "student" });
+  const student = await db.collection("users").findOne({ userId: studentUserId, role: "student" });
 
   if (!student) {
     throw new Error("Student not found");
   }
 
   // Check if already has AI Hub access
-  const existing = await db
-    .collection("aihub_users")
-    .findOne({ userId: studentUserId });
+  const existing = await db.collection("aihub_users").findOne({ userId: studentUserId });
 
   if (existing?.aiHubEnabled) {
     throw new Error("User already has AI Hub access");
@@ -353,18 +350,15 @@ export async function changeAIHubPasscodeSecure(
   const db = await connectToDatabase();
   const hashedPasscode = await bcrypt.hash(newPasscode, 12);
 
-  await db
-    .collection<AIHubUser>("aihub_users")
-    .updateOne(
-      { userId },
-      {
-        $set: {
-          passcodeHash: hashedPasscode,
-          updatedAt: new Date(),
-        },
+  await db.collection<AIHubUser>("aihub_users").updateOne(
+    { userId },
+    {
+      $set: {
+        passcodeHash: hashedPasscode,
+        updatedAt: new Date(),
       },
-    );
-
+    },
+  );
 }
 
 // ============================================================================
@@ -374,10 +368,7 @@ export async function changeAIHubPasscodeSecure(
 /**
  * Get or initialize user's progress in a subject
  */
-export async function getUserProgress(
-  userId: string,
-  subject: string,
-): Promise<UserProgress> {
+export async function getUserProgress(userId: string, subject: string): Promise<UserProgress> {
   const db = await connectToDatabase();
   const progressCollection = db.collection<any>("user_progress");
 
@@ -402,9 +393,7 @@ export async function getUserProgress(
 
   return {
     ...progress,
-    topicProgress: new Map(
-      (progress.topicProgress || []).map((tp: any) => [tp.topic, tp])
-    ),
+    topicProgress: new Map((progress.topicProgress || []).map((tp: any) => [tp.topic, tp])),
   };
 }
 
@@ -495,7 +484,8 @@ export async function updateTopicProgress(
       const oldAverage = p.averageScore ?? p.lastScore ?? 0;
       const attempts = p.attempts ?? 1;
       // Calculate new average: (oldAverage * (attempts - 1) + lastScore) / attempts
-      const newAverage = attempts === 1 ? p.lastScore : (oldAverage * (attempts - 1) + p.lastScore) / attempts;
+      const newAverage =
+        attempts === 1 ? p.lastScore : (oldAverage * (attempts - 1) + p.lastScore) / attempts;
       return {
         ...p,
         averageScore: newAverage,
@@ -525,10 +515,7 @@ export async function updateTopicProgress(
 /**
  * Get topics with average score < 50% (weak areas)
  */
-export async function getWeakTopics(
-  userId: string,
-  subject: string,
-): Promise<TopicProgress[]> {
+export async function getWeakTopics(userId: string, subject: string): Promise<TopicProgress[]> {
   const db = await connectToDatabase();
   const progressCollection = db.collection<any>("user_progress");
 
@@ -538,7 +525,7 @@ export async function getWeakTopics(
   // Filter topics with last score less than 50% (assuming 12 marks max or calculate percentage)
   return progress.topicProgress
     .filter((t: any) => {
-      const scorePercentage = (t.lastScore || 0) / 12 * 100; // Assuming 12 marks, adjust if needed
+      const scorePercentage = ((t.lastScore || 0) / 12) * 100; // Assuming 12 marks, adjust if needed
       return scorePercentage < 50;
     })
     .map((t: any) => ({
@@ -570,9 +557,7 @@ export async function hasQuestionBeenGenerated(
   questionHash: string,
 ): Promise<boolean> {
   const db = await connectToDatabase();
-  const questionCollection = db.collection<GeneratedQuestion>(
-    "generated_questions",
-  );
+  const questionCollection = db.collection<GeneratedQuestion>("generated_questions");
 
   const question = await questionCollection.findOne({
     userId,
@@ -599,9 +584,7 @@ export async function storeGeneratedQuestion(
   }> = [],
 ): Promise<void> {
   const db = await connectToDatabase();
-  const questionCollection = db.collection<GeneratedQuestion>(
-    "generated_questions",
-  );
+  const questionCollection = db.collection<GeneratedQuestion>("generated_questions");
 
   const wordLimit = marks === 8 ? 125 : 200;
   const questionHash = generateQuestionHash(questionText);
@@ -631,9 +614,7 @@ export async function getPendingQuestion(
   subject: string,
 ): Promise<GeneratedQuestion | null> {
   const db = await connectToDatabase();
-  const questionCollection = db.collection<GeneratedQuestion>(
-    "generated_questions",
-  );
+  const questionCollection = db.collection<GeneratedQuestion>("generated_questions");
 
   const question = await questionCollection.findOne({ userId, subject });
   if (!question) return null;
@@ -648,14 +629,9 @@ export async function getPendingQuestion(
 /**
  * Delete pending question after evaluation
  */
-export async function deletePendingQuestion(
-  userId: string,
-  subject: string,
-): Promise<void> {
+export async function deletePendingQuestion(userId: string, subject: string): Promise<void> {
   const db = await connectToDatabase();
-  const questionCollection = db.collection<GeneratedQuestion>(
-    "generated_questions",
-  );
+  const questionCollection = db.collection<GeneratedQuestion>("generated_questions");
 
   await questionCollection.deleteOne({ userId, subject });
 }
@@ -670,9 +646,7 @@ export async function deleteAnsweredPendingQuestion(
   answeredQuestionText: string,
 ): Promise<PendingGeneratedQuestion | null> {
   const db = await connectToDatabase();
-  const questionCollection = db.collection<GeneratedQuestion>(
-    "generated_questions",
-  );
+  const questionCollection = db.collection<GeneratedQuestion>("generated_questions");
 
   const pending = await questionCollection.findOne({ userId, subject });
   if (!pending) return null;
@@ -749,9 +723,7 @@ export async function storeSyllabus(
   topics: string[],
 ): Promise<void> {
   const db = await connectToDatabase();
-  const syllabusCollection = db.collection<UploadedSyllabus>(
-    "uploaded_syllabus",
-  );
+  const syllabusCollection = db.collection<UploadedSyllabus>("uploaded_syllabus");
 
   await syllabusCollection.updateOne(
     { userId, subject },
@@ -769,14 +741,9 @@ export async function storeSyllabus(
 /**
  * Get syllabus topics for a user
  */
-export async function getSyllabus(
-  userId: string,
-  subject: string,
-): Promise<string[]> {
+export async function getSyllabus(userId: string, subject: string): Promise<string[]> {
   const db = await connectToDatabase();
-  const syllabusCollection = db.collection<UploadedSyllabus>(
-    "uploaded_syllabus",
-  );
+  const syllabusCollection = db.collection<UploadedSyllabus>("uploaded_syllabus");
 
   const syllabus = await syllabusCollection.findOne({ userId, subject });
   return syllabus?.topics ?? [];
@@ -797,9 +764,7 @@ export async function storeEvaluation(
   maxMarks: number,
 ): Promise<void> {
   const db = await connectToDatabase();
-  const evaluationCollection = db.collection<EvaluationHistory>(
-    "evaluation_history",
-  );
+  const evaluationCollection = db.collection<EvaluationHistory>("evaluation_history");
 
   await evaluationCollection.insertOne({
     userId,
@@ -814,14 +779,9 @@ export async function storeEvaluation(
 /**
  * Get evaluation history for a user
  */
-export async function getEvaluationHistory(
-  userId: string,
-  limit = 20,
-): Promise<any[]> {
+export async function getEvaluationHistory(userId: string, limit = 20): Promise<any[]> {
   const db = await connectToDatabase();
-  const evaluationCollection = db.collection<EvaluationHistory>(
-    "evaluation_history",
-  );
+  const evaluationCollection = db.collection<EvaluationHistory>("evaluation_history");
 
   const history = await evaluationCollection
     .find({ userId })
@@ -833,6 +793,82 @@ export async function getEvaluationHistory(
   return history.map((item) => ({
     ...item,
     _id: item._id?.toString(),
+  }));
+}
+
+export async function getAIHubLeaderboard(limit = 100): Promise<AIHubLeaderboardEntry[]> {
+  const db = await connectToDatabase();
+
+  const rows = await db
+    .collection<AIHubUser>("aihub_users")
+    .aggregate<AIHubLeaderboardEntry>([
+      {
+        $match: {
+          aiHubEnabled: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "userId",
+          as: "student",
+        },
+      },
+      {
+        $lookup: {
+          from: "evaluation_history",
+          let: { aiHubUserId: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$userId", "$$aiHubUserId"] },
+              },
+            },
+            {
+              $group: {
+                _id: "$userId",
+                submissions: { $sum: 1 },
+                avgMarks: { $avg: "$score" },
+              },
+            },
+          ],
+          as: "stats",
+        },
+      },
+      {
+        $addFields: {
+          student: { $first: "$student" },
+          stats: { $first: "$stats" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: 1,
+          name: { $ifNull: ["$student.name", "$userId"] },
+          avgMarks: { $ifNull: ["$stats.avgMarks", 0] },
+          submissions: { $ifNull: ["$stats.submissions", 0] },
+        },
+      },
+      {
+        $sort: {
+          avgMarks: -1,
+          submissions: -1,
+          name: 1,
+        },
+      },
+      {
+        $limit: limit,
+      },
+    ])
+    .toArray();
+
+  return rows.map((row) => ({
+    userId: row.userId,
+    name: row.name,
+    avgMarks: Math.round((Number(row.avgMarks) || 0) * 100) / 100,
+    submissions: Number(row.submissions) || 0,
   }));
 }
 
@@ -851,9 +887,7 @@ export async function storeCategorizedSyllabus(
   categorizedTopics: TopicCategory[],
 ): Promise<void> {
   const db = await connectToDatabase();
-  const syllabusCollection = db.collection<UploadedSyllabus>(
-    "uploaded_syllabus",
-  );
+  const syllabusCollection = db.collection<UploadedSyllabus>("uploaded_syllabus");
 
   await syllabusCollection.updateOne(
     { userId, subject },
@@ -877,9 +911,7 @@ export async function getCategorizedTopics(
   subject: string,
 ): Promise<TopicCategory[]> {
   const db = await connectToDatabase();
-  const syllabusCollection = db.collection<UploadedSyllabus>(
-    "uploaded_syllabus",
-  );
+  const syllabusCollection = db.collection<UploadedSyllabus>("uploaded_syllabus");
 
   // First try to get user-uploaded syllabus
   const syllabus = await syllabusCollection.findOne({ userId, subject });
@@ -901,13 +933,11 @@ export async function getSubtopicsFromCategory(
   categoryName: string,
 ): Promise<string[]> {
   const db = await connectToDatabase();
-  const syllabusCollection = db.collection<UploadedSyllabus>(
-    "uploaded_syllabus",
-  );
+  const syllabusCollection = db.collection<UploadedSyllabus>("uploaded_syllabus");
 
   // First try user's uploaded syllabus
   let syllabus = await syllabusCollection.findOne({ userId, subject });
-  
+
   // Fall back to global syllabus
   if (!syllabus?.categorizedTopics) {
     const globalCategories = await getGlobalSyllabus(subject);
@@ -950,14 +980,12 @@ export async function storeGlobalSyllabus(
 /**
  * Get global syllabus categories (for new users or reference)
  */
-export async function getGlobalSyllabus(
-  subject: string,
-): Promise<TopicCategory[]> {
+export async function getGlobalSyllabus(subject: string): Promise<TopicCategory[]> {
   const db = await connectToDatabase();
   const globalCollection = db.collection<GlobalSyllabus>("global_syllabus");
 
   const syllabus = await globalCollection.findOne({ subject });
-  
+
   if (!syllabus?.categorizedTopics) {
     return [];
   }
