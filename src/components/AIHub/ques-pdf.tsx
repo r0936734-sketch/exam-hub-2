@@ -118,6 +118,7 @@ interface PDFQueueContextValue {
   queue: QueuedQuestion[];
   enqueue: (q: GeneratedQuestion) => { ok: boolean; reason?: string };
   dequeue: (id: string) => void;
+  updateQuestion: (id: string, updates: Partial<GeneratedQuestion>) => void;
   clearQueue: () => void;
   toasts: Toast[];
   dismissToast: (id: string) => void;
@@ -194,13 +195,22 @@ export function PDFQueueProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const updateQuestion = useCallback(
+    (id: string, updates: Partial<GeneratedQuestion>) => {
+      setQueue((prev) =>
+        prev.map((q) => (q.id === id ? { ...q, ...updates } : q))
+      );
+    },
+    []
+  );
+
   const clearQueue = useCallback(() => {
     setQueue([]);
   }, []);
 
   return (
     <PDFQueueContext.Provider
-      value={{ queue, enqueue, dequeue, clearQueue, toasts, dismissToast }}
+      value={{ queue, enqueue, dequeue, updateQuestion, clearQueue, toasts, dismissToast }}
     >
       {children}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
@@ -459,8 +469,116 @@ function QuestionCard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 8.  PDF GENERATION  (pure browser — no external library required)
+// 8.  EDITABLE PDF PREVIEW  (live editing before export)
 // ─────────────────────────────────────────────────────────────────────────────
+
+function EditableQuestionPreview({
+  question,
+  onUpdate,
+}: {
+  question: QueuedQuestion;
+  onUpdate: (updates: Partial<GeneratedQuestion>) => void;
+}) {
+  const previewText = question.questionText.trim() || "Type your question here";
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">
+            Question {question.queueIndex}
+          </p>
+          <p className="text-xs text-gray-500">Edits update the PDF preview instantly</p>
+        </div>
+        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700">
+          Live preview
+        </span>
+      </div>
+
+      <label className="mb-3 block text-xs font-medium text-gray-700">
+        <span className="mb-1 block">Question text</span>
+        <textarea
+          value={question.questionText}
+          onChange={(event) => onUpdate({ questionText: event.target.value })}
+          rows={3}
+          className="min-h-[84px] w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white"
+        />
+      </label>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block text-xs font-medium text-gray-700">
+          <span className="mb-1 block">Subtopic</span>
+          <input
+            value={question.subtopic}
+            onChange={(event) => onUpdate({ subtopic: event.target.value })}
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white"
+          />
+        </label>
+
+        <label className="block text-xs font-medium text-gray-700">
+          <span className="mb-1 block">Topic</span>
+          <input
+            value={question.topic}
+            onChange={(event) => onUpdate({ topic: event.target.value })}
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white"
+          />
+        </label>
+
+        <label className="block text-xs font-medium text-gray-700">
+          <span className="mb-1 block">Type</span>
+          <input
+            value={question.type}
+            onChange={(event) => onUpdate({ type: event.target.value })}
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white"
+          />
+        </label>
+
+        <label className="block text-xs font-medium text-gray-700">
+          <span className="mb-1 block">Marks</span>
+          <input
+            type="number"
+            min="0"
+            value={question.marks}
+            onChange={(event) =>
+              onUpdate({ marks: Number(event.target.value) || 0 })
+            }
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white"
+          />
+        </label>
+
+        <label className="block text-xs font-medium text-gray-700">
+          <span className="mb-1 block">Subject</span>
+          <input
+            value={question.subject}
+            onChange={(event) => onUpdate({ subject: event.target.value })}
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white"
+          />
+        </label>
+
+        <label className="block text-xs font-medium text-gray-700">
+          <span className="mb-1 block">Source</span>
+          <input
+            value={question.sourceLabel ?? ""}
+            onChange={(event) => onUpdate({ sourceLabel: event.target.value })}
+            placeholder="e.g. CBSE 2023 Paper 1"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-indigo-400 focus:bg-white"
+          />
+        </label>
+      </div>
+
+      <div className="mt-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+          PDF preview snippet
+        </p>
+        <p className="mt-1 text-sm font-medium text-gray-800">{previewText}</p>
+        <p className="mt-2 text-xs text-gray-500">
+          {question.subtopic} • {question.type} • {question.marks} mark{question.marks === 1 ? "" : "s"}
+          {question.sourceLabel ? ` • ${question.sourceLabel}` : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function triggerPDFExport(questions: QueuedQuestion[]) {
   if (typeof window === "undefined") return;
@@ -593,7 +711,7 @@ export function PDFQueuePanel({
   title = "PDF Export Queue",
   className = "",
 }: PDFQueuePanelProps) {
-  const { queue, dequeue, clearQueue } = usePDFQueue();
+  const { queue, dequeue, clearQueue, updateQuestion } = usePDFQueue();
   const [isExporting, setIsExporting] = useState(false);
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const confirmClearRef = useRef<HTMLButtonElement>(null);
@@ -695,6 +813,30 @@ export function PDFQueuePanel({
               onDelete={() => dequeue(q.id)}
             />
           ))}
+        </div>
+      )}
+
+      {/* ── Editable preview ── */}
+      {queue.length > 0 && (
+        <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Eye className="h-4 w-4 text-indigo-600" aria-hidden />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Editable PDF preview</h3>
+              <p className="text-xs text-gray-500">
+                Update the paper content and source before exporting.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {queue.map((q) => (
+              <EditableQuestionPreview
+                key={q.id}
+                question={q}
+                onUpdate={(updates) => updateQuestion(q.id, updates)}
+              />
+            ))}
+          </div>
         </div>
       )}
 
