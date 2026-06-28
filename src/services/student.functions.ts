@@ -16,7 +16,7 @@ function getUniqueSubmissionImages(submission: any) {
 }
 
 export const getStudentNoticesServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -45,7 +45,7 @@ export const getStudentNoticesServerFn = createServerFn({ method: "POST" })
  * Get all published tests for students
  */
 export const getPublishedTestsServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -102,7 +102,7 @@ export const getPublishedTestsServerFn = createServerFn({ method: "POST" })
   });
 
 export const getStudentDashboardServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -176,7 +176,7 @@ export const getStudentDashboardServerFn = createServerFn({ method: "POST" })
  * Get test details with all questions
  */
 export const getTestDetailServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; testId: string }) => data)
+  .validator((data: { token: string; testId: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -242,7 +242,7 @@ export interface SubmitAnswersInput {
  * Submit test answers with image support
  */
 export const submitTestAnswersServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: SubmitAnswersInput) => data)
+  .validator((data: SubmitAnswersInput) => data)
   .handler(async ({ data }) => {
     try {
       if (!data.testId || !Array.isArray(data.answers)) {
@@ -320,7 +320,7 @@ export const submitTestAnswersServerFn = createServerFn({ method: "POST" })
   });
 
 export const getMySubmissionsServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -392,7 +392,7 @@ export const getMySubmissionsServerFn = createServerFn({ method: "POST" })
   });
 
 export const getAdminsListServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -414,7 +414,7 @@ export const getAdminsListServerFn = createServerFn({ method: "POST" })
  * Get all recent submissions grouped by test (visible to everyone)
  */
 export const getRecentSubmissionsByTestServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -495,7 +495,7 @@ export const getRecentSubmissionsByTestServerFn = createServerFn({ method: "POST
  * Get admin view of all submissions grouped by test
  */
 export const getAdminSubmissionsViewServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();

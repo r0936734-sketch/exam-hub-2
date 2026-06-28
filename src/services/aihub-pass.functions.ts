@@ -28,7 +28,7 @@ async function requireTargetStudent(token: string) {
 }
 
 export const getAIHubPassReminderStatusServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: TokenInput) => data)
+  .validator((data: TokenInput) => data)
   .handler(async ({ data }) => {
     const user = await requireTargetStudent(data.token);
     const passReceived = await hasAIHubPassBeenReceived(user.id);
@@ -40,7 +40,7 @@ export const getAIHubPassReminderStatusServerFn = createServerFn({ method: "POST
   });
 
 export const markAIHubPassReceivedServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: TokenInput) => data)
+  .validator((data: TokenInput) => data)
   .handler(async ({ data }) => {
     const user = await requireTargetStudent(data.token);
     await markAIHubPassReceived(user.id);

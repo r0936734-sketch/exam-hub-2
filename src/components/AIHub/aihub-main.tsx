@@ -4,6 +4,7 @@ import { QuestionGenerator } from "./question-generator";
 import { ProgressDashboard } from "./progress-dashboard";
 import { SyllabusManager } from "./syllabus-manager";
 import { AIHubLeaderboard } from "./aihub-leaderboard";
+import { PDFQueuePanel, PDFQueueProvider } from "./ques-pdf";
 import {
   BarChart3,
   BookOpen,
@@ -11,6 +12,7 @@ import {
   Trophy,
   Sparkles,
   Zap,
+  FileText,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────
@@ -121,6 +123,14 @@ const hubTabs = [
     description: "Compare AI Hub average marks and submissions.",
     icon: Trophy,
     emoji: "🏆",
+  },
+  {
+    value: "pdf",
+    label: "Question Paper",
+    fullLabel: "Question Paper Export",
+    description: "Save generated questions and export them as a PDF.",
+    icon: FileText,
+    emoji: "📄",
   },
   {
     value: "syllabus",
@@ -360,7 +370,8 @@ export function AIHubMain() {
 
         {/* ── Page content ── */}
         <main className="flex-1">
-          <div className="aihub-content-wrap">
+          <PDFQueueProvider>
+            <div className="aihub-content-wrap">
             {/* Section header */}
             <div className="mb-5 flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -400,12 +411,17 @@ export function AIHubMain() {
                   <AIHubLeaderboard />
                 </TabsContent>
 
+                <TabsContent value="pdf" className="mt-0 space-y-4" forceMount={activeTab === "pdf" ? true : undefined}>
+                  <PDFQueuePanel />
+                </TabsContent>
+
                 <TabsContent value="syllabus" className="mt-0 space-y-4" forceMount={activeTab === "syllabus" ? true : undefined}>
                   <SyllabusManager subject={subject} />
                 </TabsContent>
               </div>
             </Tabs>
           </div>
+          </PDFQueueProvider>
         </main>
       </div>
     </div>

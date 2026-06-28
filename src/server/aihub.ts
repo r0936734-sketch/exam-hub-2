@@ -80,6 +80,8 @@ export interface EvaluationHistory {
   subject: string;
   score: number;
   maxMarks: number;
+  generationMode?: "syllabus" | "custom";
+  sourceLabel?: string;
   evaluatedAt: Date;
 }
 
@@ -100,6 +102,8 @@ export interface GeneratedQuestion {
   questionType: "theory" | "numerical";
   wordLimit: number;
   questionHash: string;
+  generationMode?: "syllabus" | "custom";
+  sourceLabel?: string;
   generatedAt: Date;
   choices?: Array<{
     question: string;
@@ -582,6 +586,8 @@ export async function storeGeneratedQuestion(
     type: "theory" | "numerical";
     topic: string;
   }> = [],
+  generationMode: "syllabus" | "custom" = "syllabus",
+  sourceLabel?: string,
 ): Promise<void> {
   const db = await connectToDatabase();
   const questionCollection = db.collection<GeneratedQuestion>("generated_questions");
@@ -601,6 +607,8 @@ export async function storeGeneratedQuestion(
     questionType,
     wordLimit,
     questionHash,
+    generationMode,
+    sourceLabel,
     choices,
     generatedAt: new Date(),
   } as any);
@@ -762,6 +770,8 @@ export async function storeEvaluation(
   subject: string,
   score: number,
   maxMarks: number,
+  generationMode: "syllabus" | "custom" = "syllabus",
+  sourceLabel?: string,
 ): Promise<void> {
   const db = await connectToDatabase();
   const evaluationCollection = db.collection<EvaluationHistory>("evaluation_history");
@@ -772,6 +782,8 @@ export async function storeEvaluation(
     subject,
     score,
     maxMarks,
+    generationMode,
+    sourceLabel,
     evaluatedAt: new Date(),
   } as any);
 }

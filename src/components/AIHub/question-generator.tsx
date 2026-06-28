@@ -35,6 +35,7 @@ import {
   getEvaluationProgressFn,
   getPendingQuestionFn,
 } from "@/services/aihub.server";
+import { SaveToPDFQueueButton, type GeneratedQuestion } from "@/components/AIHub/ques-pdf";
 
 interface TopicCategory {
   name: string;
@@ -76,6 +77,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const [marks, setMarks] = useState<8 | 12>(8);
   const [questionType, setQuestionType] = useState<"theory" | "numerical" | "auto">("auto");
   const [customPrompt, setCustomPrompt] = useState("");
+  const [progressiveCustomPrompt, setProgressiveCustomPrompt] = useState("");
   const [includeProgressive, setIncludeProgressive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -88,6 +90,8 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const [selectedQuestionChoiceIndex, setSelectedQuestionChoiceIndex] = useState(0);
   const [generationModelNotices, setGenerationModelNotices] = useState<string[]>([]);
   const [generatedTopic, setGeneratedTopic] = useState("");
+  const [generationMode, setGenerationMode] = useState<"syllabus" | "custom">("syllabus");
+  const [generationSourceLabel, setGenerationSourceLabel] = useState("");
 
   // Evaluation states
   const [evaluationMode, setEvaluationMode] = useState(false);
@@ -204,13 +208,17 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   }, [evaluating, evaluationRequestId]);
 
   const handleGenerateQuestion = async () => {
-    if (!selectedCategory.trim()) {
-      setError("Please select a subject category");
+    const hasCustomInstructions = Boolean(customPrompt.trim() || progressiveCustomPrompt.trim());
+    const hasCategorySelection = Boolean(selectedCategory.trim());
+
+    if (!hasCategorySelection && !hasCustomInstructions) {
+      setError("Please select a subject category or describe the topic in custom instructions");
       return;
     }
 
-    const topicForGeneration = selectedTopic.trim() || selectedCategory.trim();
-    const autoSelectSubtopic = !selectedTopic.trim();
+    const topicForGeneration = selectedTopic.trim() || selectedCategory.trim() || "Custom prompt request";
+    const autoSelectSubtopic = !selectedTopic.trim() && hasCategorySelection;
+    const nextGenerationMode: "syllabus" | "custom" = hasCustomInstructions || !hasCategorySelection ? "custom" : "syllabus";
 
     setLoading(true);
     setError("");
@@ -229,13 +237,16 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
       const data = await generateQuestionFn({
         data: {
           topic: topicForGeneration,
-          categoryName: selectedCategory.trim(),
+          categoryName: selectedCategory.trim() || undefined,
           candidateSubtopics: autoSelectSubtopic ? subtopics : [],
           marks,
           questionType,
           subject,
           customPrompt: customPrompt.trim(),
+          progressiveCustomPrompt: progressiveCustomPrompt.trim(),
           includeProgressiveSubtopic: includeProgressive,
+          generationMode: nextGenerationMode,
+          sourceLabel: selectedTopic.trim() || selectedCategory.trim() || customPrompt.trim() || "Custom prompt request",
         },
       });
 
@@ -254,6 +265,10 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
       setGeneratedTopic(data.topic || selectedTopic.trim() || "");
       setEvaluationQuestionText(data.question);
       setGenerationModelNotices(data.modelNotices ?? []);
+      setGenerationMode(nextGenerationMode);
+      setGenerationSourceLabel(
+        selectedTopic.trim() || selectedCategory.trim() || customPrompt.trim() || "Custom prompt request",
+      );
       setError("");
     } catch (err) {
       setError("Failed to generate question. Please try again.");
@@ -390,6 +405,8 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
         topic: generatedTopic || selectedTopic.trim() || "Custom evaluation",
         subject,
         requestId,
+        generationMode,
+        sourceLabel: generationSourceLabel || generatedTopic || selectedTopic.trim() || customPrompt.trim() || "Custom prompt request",
       },
     });
 
@@ -430,6 +447,19 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
   const wordLimit = marks === 8 ? 125 : 200;
   const hasRemainingPendingQuestion = Boolean(evaluation?.pendingQuestion);
   const canAddMoreImages = imageFiles.length < MAX_EVALUATION_IMAGES;
+  const currentQueuedQuestion: GeneratedQuestion | null = question
+    ? {
+        questionText: question.text,
+        marks,
+        subtopic: question.topic || generatedTopic || selectedTopic || selectedCategory || "General",
+        topic: selectedCategory || question.topic || generatedTopic || selectedTopic || "General",
+        type: question.type
+          ? question.type.charAt(0).toUpperCase() + question.type.slice(1)
+          : "Theory",
+        subject,
+        sourceLabel: generationSourceLabel || selectedTopic || selectedCategory || undefined,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -443,7 +473,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             </p>
             <h2 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">Generate Question</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Pick a syllabus area and let AI prepare a university-style practice question.
+              Choose a syllabus area or describe the topic in your own words, and let the AI build a polished practice question from that brief.
             </p>
           </div>
           <span className="ai-hub-pill w-fit text-xs">{wordLimit} word target</span>
@@ -511,7 +541,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Question Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Primary Question Type</label>
             <select
               value={questionType}
               onChange={(e) => setQuestionType(e.target.value as typeof questionType)}
@@ -522,6 +552,9 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
               <option value="theory">Theory</option>
               <option value="numerical">Numerical</option>
             </select>
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              If your instructions ask for both numerical and theory styles, the system will generate each format distinctly.
+            </p>
           </div>
 
           <div className="col-span-2 sm:col-span-1">
@@ -538,8 +571,12 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             <input
               type="checkbox"
               checked={includeProgressive}
-              onChange={(e) => setIncludeProgressive(e.target.checked)}
-              disabled={loading || !selectedCategory.trim()}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setIncludeProgressive(checked);
+                if (!checked) setProgressiveCustomPrompt("");
+              }}
+              disabled={loading || (!selectedCategory.trim() && !customPrompt.trim() && !progressiveCustomPrompt.trim())}
               className="form-checkbox h-4 w-4 text-primary"
             />
             <span className="text-sm text-gray-700 dark:text-gray-300 ml-2">
@@ -560,12 +597,30 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
             type="text"
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
-            placeholder="e.g., 'focus on practical examples', 'make it easier', 'include real-world application'"
+            placeholder="e.g., 'generate 1 numerical and 1 theory question', 'focus on practical examples', 'make it easier'"
             className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             disabled={loading}
           />
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Tip: Add any special instructions for question generation</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Tip: You can leave the category blank and describe the exact topic, style, or objective here.</p>
         </div>
+
+          {/* Progressive-specific instructions when enabled */}
+          {includeProgressive && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Progressive Instructions (Optional)
+              </label>
+              <input
+                type="text"
+                value={progressiveCustomPrompt}
+                onChange={(e) => setProgressiveCustomPrompt(e.target.value)}
+                placeholder="e.g., 'use a different subtopic and make the second question numerical'"
+                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Tip: These instructions shape the second question with a new subtopic, alternate style, or fresh angle.</p>
+            </div>
+          )}
 
         {error && (
           <Alert className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 mb-4">
@@ -596,7 +651,7 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
 
         <Button
           onClick={handleGenerateQuestion}
-          disabled={loading || !selectedCategory.trim()}
+          disabled={loading || (!selectedCategory.trim() && !customPrompt.trim() && !progressiveCustomPrompt.trim())}
           className="ai-hub-primary-button w-full"
           size="lg"
         >
@@ -630,7 +685,8 @@ export function QuestionGenerator({ subject }: QuestionGeneratorProps) {
                 {question.topic && <span>Topic: {question.topic}</span>}
               </div>
             </div>
-            <div className="flex gap-2 self-start">
+            <div className="flex flex-wrap gap-2 self-start">
+              <SaveToPDFQueueButton question={currentQueuedQuestion} />
               <Button variant="outline" size="sm" onClick={handleCopyQuestion}>
                 <Copy className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Copy</span>

@@ -91,6 +91,8 @@ function buildQuestionVariantPrompt(
   customPrompt: string | undefined,
   variantIndex: number,
   previousQuestions: string[] = [],
+  variantType?: "theory" | "numerical" | "auto",
+  requiresDifferentSubtopic?: boolean,
 ) {
   const basePrompt = customPrompt?.trim();
   const previousQuestionBlock = previousQuestions.length
@@ -103,8 +105,36 @@ Do NOT generate a paraphrase of any of these. The next question must require a m
     variantIndex === 0
       ? "Create the strongest primary version of this question."
       : `Create hidden swap question ${variantIndex + 1}. Keep it related to the same topic/subtopic and marks, but test a different angle so a student cannot reuse the same answer. Examples of valid variation: concept explanation vs application, comparison vs design/use-case, algorithm trace vs complexity, different numerical dataset, different sub-part focus.`;
+  const typeInstruction =
+    variantType && variantType !== "auto"
+      ? `This variant must be a ${variantType} question.`
+      : "";
+  const subtopicInstruction = requiresDifferentSubtopic
+    ? "Use a different subtopic than the primary question, while still staying tightly related to the same overall topic."
+    : "";
 
-  return [basePrompt, previousQuestionBlock, variantInstruction].filter(Boolean).join("\n\n");
+  return [basePrompt, previousQuestionBlock, variantInstruction, typeInstruction, subtopicInstruction]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function inferRequestedVariantTypes(
+  customPrompt: string | undefined,
+  progressiveCustomPrompt: string | undefined,
+  fallbackQuestionType: "theory" | "numerical" | "auto",
+): Array<"theory" | "numerical" | "auto"> {
+  const promptText = [customPrompt, progressiveCustomPrompt].filter(Boolean).join("\n").toLowerCase();
+  const mentionedTypes = [...promptText.matchAll(/\b(numerical|theory)\b/g)].map((match) =>
+    match[1] === "numerical" ? "numerical" : "theory",
+  );
+  const wantsMixedTypes =
+    mentionedTypes.length >= 2 && /\b(and|plus|with|mixed|both|one|1|two|2)\b/.test(promptText);
+
+  if (wantsMixedTypes && mentionedTypes.length >= 2) {
+    return [mentionedTypes[0], mentionedTypes[1]];
+  }
+
+  return [fallbackQuestionType, fallbackQuestionType];
 }
 
 function isGeneratedQuestionUsable(question: string) {
@@ -121,7 +151,7 @@ function isGeneratedQuestionUsable(question: string) {
 export const getEvaluationProgressFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: { requestId: string }) => data)
+  .validator((data: { requestId: string }) => data)
   .handler(async ({ data }) => {
     if (!isValidRequestId(data.requestId)) {
       return { progress: null };
@@ -190,7 +220,7 @@ export const getAIHubAccessStatusFn = createServerFn({
 export const verifyAIHubPasscodeFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: { passcode: string }) => data)
+  .validator((data: { passcode: string }) => data)
   .handler(async ({ data }) => {
     const passcode = data.passcode?.trim();
 
@@ -238,16 +268,19 @@ export const verifyAIHubPasscodeFn = createServerFn({
 export const generateQuestionFn = createServerFn({
   method: "POST",
 })
-  .inputValidator(
+  .validator(
     (data: {
-      topic: string;
+      topic?: string;
       categoryName?: string;
       candidateSubtopics?: string[];
       marks: number;
       questionType: "theory" | "numerical" | "auto";
       subject: string;
       customPrompt?: string;
+      progressiveCustomPrompt?: string;
       includeProgressiveSubtopic?: boolean;
+      generationMode?: "syllabus" | "custom";
+      sourceLabel?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -257,23 +290,47 @@ export const generateQuestionFn = createServerFn({
         return { error: "Unauthorized" };
       }
 
-      const { topic, categoryName, marks, questionType, subject, customPrompt, includeProgressiveSubtopic } = data;
+      const {
+        topic,
+        categoryName,
+        marks,
+        questionType,
+        subject,
+        customPrompt,
+        progressiveCustomPrompt,
+        includeProgressiveSubtopic,
+        generationMode,
+        sourceLabel,
+      } = data;
+
+      const customInstructionMode = Boolean(
+        customPrompt?.trim() || progressiveCustomPrompt?.trim() || generationMode === "custom",
+      );
+      const customTopicSeed = [customPrompt?.trim(), progressiveCustomPrompt?.trim()]
+        .filter(Boolean)
+        .join(" | ");
+      const resolvedTopic = topic?.trim() || (customInstructionMode ? customTopicSeed || "Custom prompt request" : "");
 
       // Validation
-      if (!topic || ![8, 12].includes(marks) || !questionType || !subject) {
+      if (!resolvedTopic && !customInstructionMode) {
+        return { error: "Invalid request parameters" };
+      }
+      if (![8, 12].includes(marks) || !questionType || !subject) {
         return { error: "Invalid request parameters" };
       }
 
       const syllabusCategories = getBuiltInSyllabusCategories(subject);
       const selectedCategory = categoryName
         ? syllabusCategories.find((category) => category.name === categoryName)
-        : syllabusCategories.find((category) => category.subtopics.includes(topic));
-      const isAutoSubtopicSelection = Boolean(selectedCategory && topic === selectedCategory.name);
+        : resolvedTopic
+            ? syllabusCategories.find((category) => category.subtopics.includes(resolvedTopic))
+            : undefined;
+      const isAutoSubtopicSelection = Boolean(selectedCategory && resolvedTopic === selectedCategory.name);
       const candidateSubtopics = isAutoSubtopicSelection ? (selectedCategory?.subtopics ?? []) : [];
 
       // Get user's progress for personalization
       const progress = await getUserProgress(user.id, subject);
-      const topicProgress = progress.topicProgress?.get(topic);
+      const topicProgress = progress.topicProgress?.get(resolvedTopic);
 
       const context = topicProgress
         ? {
@@ -287,8 +344,9 @@ export const generateQuestionFn = createServerFn({
       // Check built-in syllabus topics
       const syllabusTopics = getBuiltInSyllabusTopics(subject);
       if (
+        !customInstructionMode &&
         syllabusTopics.length > 0 &&
-        !syllabusTopics.includes(topic) &&
+        !syllabusTopics.includes(resolvedTopic) &&
         !isAutoSubtopicSelection
       ) {
         return { error: "Topic not found in the built-in syllabus" };
@@ -305,41 +363,68 @@ export const generateQuestionFn = createServerFn({
 
       const targetChoiceCount = 2;
       const maxGenerationAttempts = 4;
+      const requestedVariantTypes = inferRequestedVariantTypes(
+        customPrompt,
+        progressiveCustomPrompt,
+        questionType,
+      );
 
       for (
         let i = 0;
         i < maxGenerationAttempts && generatedChoices.length < targetChoiceCount;
         i++
       ) {
-        // For the second variant, optionally pick a progressive subtopic from candidateSubtopics
+        const isSecondaryVariant = i === 1;
+        const useDifferentSubtopic = Boolean(
+          isSecondaryVariant && includeProgressiveSubtopic && generationContext.candidateSubtopics?.length,
+        );
         let variantTopic: string;
         if (i === 0) {
-          variantTopic = topic;
-        } else if (i === 1 && includeProgressiveSubtopic && generationContext.candidateSubtopics?.length) {
-          // choose a candidate subtopic different from the main topic
-          const candidates = generationContext.candidateSubtopics.filter((s: string) => s !== topic);
-          variantTopic = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : (generatedChoices[0]?.topic ?? topic);
+          variantTopic = resolvedTopic;
+        } else if (useDifferentSubtopic) {
+          const candidateTopics = generationContext.candidateSubtopics.filter(
+            (s: string) => s !== resolvedTopic && s !== generatedChoices[0]?.topic,
+          );
+          variantTopic = candidateTopics.length
+            ? candidateTopics[Math.floor(Math.random() * candidateTopics.length)]
+            : generatedChoices[0]?.topic ?? resolvedTopic;
         } else {
-          variantTopic = generatedChoices[0]?.topic ?? topic;
+          variantTopic = generatedChoices[0]?.topic ?? resolvedTopic;
         }
 
-        const variantContext =
-          i === 0
-            ? generationContext
-            : {
-                ...context,
-                selectedCategory: selectedCategory?.name,
-                candidateSubtopics: [],
-              };
+        const variantQuestionType = isSecondaryVariant
+          ? requestedVariantTypes[1] ?? questionType
+          : requestedVariantTypes[0] ?? questionType;
+        const variantContext = {
+          ...context,
+          selectedCategory: selectedCategory?.name,
+          candidateSubtopics: useDifferentSubtopic ? generationContext.candidateSubtopics ?? [] : [],
+        };
+        const variantPrompt = [
+          isSecondaryVariant && progressiveCustomPrompt?.trim()
+            ? progressiveCustomPrompt
+            : customPrompt,
+          useDifferentSubtopic
+            ? "This is the progressive second question. Use a different subtopic from the primary question and keep it closely related to the same topic."
+            : undefined,
+          variantQuestionType === "auto"
+            ? undefined
+            : `Ensure this variant is a ${variantQuestionType} question.`,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+
         const result = await generateQuestion(
           variantTopic,
           marks,
-          questionType,
+          variantQuestionType,
           variantContext,
           buildQuestionVariantPrompt(
-            customPrompt,
+            variantPrompt,
             generatedChoices.length,
             generatedChoices.map((choice) => choice.question),
+            variantQuestionType,
+            useDifferentSubtopic,
           ),
         );
 
@@ -375,7 +460,7 @@ export const generateQuestionFn = createServerFn({
         const retry = await generateQuestion(
           primaryChoice.topic,
           marks,
-          questionType,
+          primaryChoice.type,
           {
             ...context,
             selectedCategory: selectedCategory?.name,
@@ -385,6 +470,7 @@ export const generateQuestionFn = createServerFn({
             customPrompt,
             generatedChoices.length,
             generatedChoices.map((choice) => choice.question),
+            primaryChoice.type,
           ),
         );
         finalModelNotices = [...finalModelNotices, ...retry.modelNotices];
@@ -400,6 +486,7 @@ export const generateQuestionFn = createServerFn({
       }
 
       // Store generated question
+      const effectiveGenerationMode: "syllabus" | "custom" = customInstructionMode ? "custom" : "syllabus";
       await storeGeneratedQuestion(
         user.id,
         primaryChoice.topic,
@@ -408,6 +495,8 @@ export const generateQuestionFn = createServerFn({
         marks,
         primaryChoice.type,
         generatedChoices,
+        effectiveGenerationMode,
+        sourceLabel || primaryChoice.topic || resolvedTopic || "Custom prompt request",
       );
 
       return {
@@ -440,7 +529,7 @@ export const generateQuestionFn = createServerFn({
 export const evaluateAnswerFn = createServerFn({
   method: "POST",
 })
-  .inputValidator(
+  .validator(
     (data: {
       imageUrl: string;
       imageUrls?: string[];
@@ -449,6 +538,8 @@ export const evaluateAnswerFn = createServerFn({
       topic: string;
       subject: string;
       requestId?: string;
+      generationMode?: "syllabus" | "custom";
+      sourceLabel?: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -505,11 +596,24 @@ export const evaluateAnswerFn = createServerFn({
         notices: modelNotices,
       });
 
-      // Update progress
-      await updateTopicProgress(user.id, subject, topic, evaluation.score, marks);
+      const evaluationMode = data.generationMode === "custom" ? "custom" : "syllabus";
+      const evaluationSourceLabel = data.sourceLabel || topic || "Custom prompt request";
+
+      // Update progress only for syllabus-based work; custom prompt sessions stay separate.
+      if (evaluationMode === "syllabus") {
+        await updateTopicProgress(user.id, subject, topic, evaluation.score, marks);
+      }
 
       // Store evaluation (only essential data for optimization)
-      await storeEvaluation(user.id, topic, subject, evaluation.score, marks);
+      await storeEvaluation(
+        user.id,
+        topic,
+        subject,
+        evaluation.score,
+        marks,
+        evaluationMode,
+        evaluationSourceLabel,
+      );
 
       // Keep unanswered variants pending; remove only the question that was evaluated.
       const pendingQuestion = await deleteAnsweredPendingQuestion(user.id, subject, questionText);
@@ -560,7 +664,7 @@ export const evaluateAnswerFn = createServerFn({
 export const getUserProgressFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: string) => data)
+  .validator((data: string) => data)
   .handler(async ({ data: subject }) => {
     try {
       const user = await getCurrentUser();
@@ -599,7 +703,7 @@ export const getUserProgressFn = createServerFn({
 export const getWeakTopicsFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: string) => data)
+  .validator((data: string) => data)
   .handler(async ({ data: subject }) => {
     try {
       const user = await getCurrentUser();
@@ -663,7 +767,7 @@ export const getAIHubLeaderboardFn = createServerFn({
 export const getPendingQuestionFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((subject: string) => subject)
+  .validator((subject: string) => subject)
   .handler(async ({ data: subject }): Promise<{ error?: string; question: any | null }> => {
     try {
       const user = await getCurrentUser();
@@ -685,7 +789,7 @@ export const getPendingQuestionFn = createServerFn({
 export const clearPendingQuestionFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((subject: string) => subject)
+  .validator((subject: string) => subject)
   .handler(async ({ data: subject }): Promise<{ error?: string; success?: boolean }> => {
     try {
       const user = await getCurrentUser();
@@ -707,7 +811,7 @@ export const clearPendingQuestionFn = createServerFn({
 export const getSyllabusFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: { subject: string }) => data)
+  .validator((data: { subject: string }) => data)
   .handler(async ({ data }) => {
     try {
       const user = await getCurrentUser();
@@ -729,7 +833,7 @@ export const getSyllabusFn = createServerFn({
 export const getCategorizedTopicsFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: { subject: string }) => data)
+  .validator((data: { subject: string }) => data)
   .handler(async ({ data }) => {
     try {
       const user = await getCurrentUser();
@@ -751,7 +855,7 @@ export const getCategorizedTopicsFn = createServerFn({
 export const getSubtopicsFromCategoryFn = createServerFn({
   method: "POST",
 })
-  .inputValidator((data: { subject: string; categoryName: string }) => data)
+  .validator((data: { subject: string; categoryName: string }) => data)
   .handler(async ({ data }) => {
     try {
       const user = await getCurrentUser();

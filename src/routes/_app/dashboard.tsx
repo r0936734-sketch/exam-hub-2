@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
-const EXAM_DATE = new Date("2026-08-16T00:00:00+05:30");
+const EXAM_DATE = new Date("2026-08-15T00:00:00+05:30");
 
 function getTimeLeft() {
   const diff = Math.max(0, EXAM_DATE.getTime() - Date.now());
@@ -53,7 +53,7 @@ function ExamCountdown() {
         <div className="grid gap-0 lg:grid-cols-[1fr_1.25fr]">
           <div className="bg-primary text-primary-foreground p-6">
             <div className="flex items-center gap-2 text-sm font-medium text-primary-foreground/80">
-              <Clock className="size-4" /> Time left till 16 August 2026
+              <Clock className="size-4" /> Time left till 15 August 2026
             </div>
             <div className="mt-5 flex items-end gap-5">
               <div>
