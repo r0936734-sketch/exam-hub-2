@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuestionGenerator } from "./question-generator";
 import { ProgressDashboard } from "./progress-dashboard";
 import { SyllabusManager } from "./syllabus-manager";
 import { AIHubLeaderboard } from "./aihub-leaderboard";
 import { PDFQueuePanel, PDFQueueProvider } from "./ques-pdf";
+import { JagguAssistant } from "./jaggu-assistant";
 import {
   BarChart3,
   BookOpen,
+  Bot,
   Lightbulb,
   Trophy,
   Sparkles,
@@ -53,6 +55,26 @@ const styles = `
 .aihub-thinking-spin { animation: aihub-thinking-spin 2.4s linear infinite; }
 .aihub-orb-rotate    { animation: aihub-orb-rotate 8s linear infinite; }
 
+/* Jaggu marquee — small running hint from Jaggu avatar */
+.jaggu-marquee {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 140px;
+  vertical-align: middle;
+}
+.jaggu-marquee span {
+  display: inline-block;
+  padding-left: 100%;
+  animation: jaggu-marquee 5s linear forwards;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground)/0.95);
+}
+@keyframes jaggu-marquee {
+  from { transform: translateX(0%); }
+  to   { transform: translateX(-100%); }
+}
+
 /* Desktop sidebar layout */
 .aihub-shell {
   display: flex;
@@ -69,10 +91,11 @@ const styles = `
     position: sticky;
     top: 0;
     height: 100dvh;
-    width: 220px;
-    min-width: 220px;
+    width: 260px;
+    min-width: 260px;
     flex-direction: column;
-    border-right: 1px solid hsl(var(--border)/.6);
+    /* soften the sidebar divider to avoid harsh white bars */
+    border-right: 1px solid hsl(var(--border)/.12);
     background: hsl(var(--card)/.6);
     backdrop-filter: blur(12px);
     padding: 0;
@@ -107,6 +130,14 @@ const hubTabs = [
     description: "Create exam questions and check handwritten answers.",
     icon: Lightbulb,
     emoji: "🎯",
+  },
+  {
+    value: "assistant",
+    label: "Jaggu",
+    fullLabel: "Jaggu Assistant",
+    description: "Ask Jaggu questions, upload images, and get study help.",
+    icon: Bot,
+    emoji: "🧠",
   },
   {
     value: "progress",
@@ -229,8 +260,16 @@ export function AIHubMain() {
   const [activeTab, setActiveTab] = useState<TabValue>("questions");
   // In a real integration, wire this to your generateQuestionFn / evaluateAnswerFn loading states
   const [aiThinking] = useState(false);
+  const [showJagguMarquee, setShowJagguMarquee] = useState(false);
   const subject = "Computer Science";
   const activeTabMeta = hubTabs.find((t) => t.value === activeTab) ?? hubTabs[0];
+
+  useEffect(() => {
+    // Show the small running hint for a few seconds when AI Hub opens
+    setShowJagguMarquee(true);
+    const t = setTimeout(() => setShowJagguMarquee(false), 6000);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div className="aihub-shell">
@@ -264,6 +303,11 @@ export function AIHubMain() {
                 AI Hub
               </p>
               <p className="text-[13px] font-bold text-foreground leading-tight">{subject}</p>
+              {showJagguMarquee && (
+                <div className="mt-1 jaggu-marquee" aria-hidden>
+                  <span>Have a doubt? Try me — ask Jaggu!</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -308,7 +352,7 @@ export function AIHubMain() {
       {/* ═══════════════════════════════════════════════════
           MAIN COLUMN
       ═══════════════════════════════════════════════════ */}
-      <div className="aihub-main-col">
+      <div className="aihub-main-col relative">
 
         {/* ── Mobile-only top header ── */}
         <header className="aihub-mobile-header sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-md">
@@ -333,6 +377,11 @@ export function AIHubMain() {
               <div>
                 <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">AI Hub</p>
                 <p className="text-[13px] font-bold text-foreground">{subject}</p>
+                {showJagguMarquee && (
+                  <div className="mt-1 jaggu-marquee" aria-hidden>
+                    <span>Have a doubt? Try me — ask Jaggu!</span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2.5 py-1">
@@ -417,6 +466,10 @@ export function AIHubMain() {
 
                 <TabsContent value="syllabus" className="mt-0 space-y-4" forceMount={activeTab === "syllabus" ? true : undefined}>
                   <SyllabusManager subject={subject} />
+                </TabsContent>
+
+                <TabsContent value="assistant" className="mt-0 space-y-4" forceMount={activeTab === "assistant" ? true : undefined}>
+                  <JagguAssistant subject={subject} embedInMain />
                 </TabsContent>
               </div>
             </Tabs>

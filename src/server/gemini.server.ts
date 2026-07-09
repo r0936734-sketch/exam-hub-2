@@ -58,7 +58,7 @@ const QUESTION_GENERATION_MODELS = [
 
 const ANSWER_EVALUATION_MODELS = [
   {
-    name: "gemma-3-27b-it",
+    name: "gemma-4-31b-it",
   },
   {
     name: "gemma-4-26b-a4b-it",
@@ -86,18 +86,27 @@ function isGeminiFallbackError(error: unknown): boolean {
   return (
     e.status === 429 ||
     e.statusCode === 429 ||
+    e.status === 500 ||
+    e.statusCode === 500 ||
     e.status === 503 ||
     e.statusCode === 503 ||
     message.includes("429") ||
+    message.includes("500") ||
     message.includes("503") ||
     message.includes("quota") ||
     message.includes("busy") ||
     message.includes("overloaded") ||
     message.includes("unavailable") ||
     message.includes("high demand") ||
+    message.includes("internal error") ||
+    message.includes("internal server") ||
     message.includes("timed out") ||
     message.includes("timeout")
   );
+}
+
+export function isGeminiTransientError(error: unknown): boolean {
+  return isGeminiFallbackError(error);
 }
 
 async function withTimeout<T>(
@@ -666,6 +675,64 @@ Rules:
 /**
  * Read and evaluate a handwritten answer image in one Gemini Vision request.
  */
+export async function generateStudyHelpReply({
+  prompt,
+  subject,
+  imageDataUrls = [],
+  previousMessage,
+}: {
+  prompt?: string;
+  subject?: string;
+  imageDataUrls?: string[];
+  previousMessage?: string;
+}): Promise<string> {
+  const instruction = `You are Jaggu, a friendly AI study companion for ${subject || "Computer Science"} students.
+
+Help the student with clear explanations, step-by-step reasoning, summaries, examples, and exam-oriented guidance.
+If the user includes an image, use it as context and describe what you see, then help solve or explain the topic.
+
+Rules:
+- Respond in rich Markdown with headings, bullets, numbered steps, tables if useful, and code blocks when needed.
+- Use a polished, encouraging tone.
+- For code blocks, use a dark theme style and include language labels when known.
+- Use Unicode symbols instead of LaTeX where possible.
+- Keep the explanation concise but helpful.
+- If the user asks for a direct answer, give it plainly first and then a short explanation.
+- If the user asks something too broad, offer a focused next step.
+
+User request:
+${prompt || "Help me understand this topic."}`;
+
+  const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
+    { text: instruction },
+  ];
+
+  // If a single previous message is provided, give it to the model as brief context
+  if (previousMessage) {
+    parts.unshift({ text: `PREVIOUS_MESSAGE: ${previousMessage}` });
+  }
+
+  for (const imageDataUrl of imageDataUrls) {
+    const match = imageDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (!match) continue;
+    parts.push({
+      inlineData: {
+        mimeType: match[1],
+        data: match[2],
+      },
+    });
+  }
+
+  const response = await streamGeminiTextWithFallback({
+    models: QUESTION_GENERATION_MODELS,
+    contents: [{ role: "user" as const, parts }],
+    operationLabel: "Study help",
+    fallbackMessage: "The study assistant model is busy. Switching to a fallback model...",
+  });
+
+  return response.trim() || "I’m here to help. Please try again with a clearer question.";
+}
+
 export async function evaluateAnswerFromImage(
   imageUrls: string[],
   questionText: string,

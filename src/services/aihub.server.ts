@@ -21,8 +21,10 @@ import { COMPUTER_SCIENCE_SYLLABUS } from "@/server/seed-computer-syllabus";
 import {
   generateQuestion,
   evaluateAnswerFromImage,
+  generateStudyHelpReply,
   isGeminiQuotaError,
   isGeminiUnavailableError,
+  isGeminiTransientError,
 } from "@/server/gemini.server";
 import { getCurrentSessionServerFn } from "@/services/auth.functions";
 import { connectToDatabase } from "@/server/db";
@@ -513,6 +515,12 @@ export const generateQuestionFn = createServerFn({
       if (isGeminiQuotaError(error)) {
         return { error: "Daily AI quota reached. Please try again tomorrow." };
       }
+      if (isGeminiTransientError(error)) {
+        return {
+          error:
+            "The AI service hit a temporary issue while generating the question. Please try again now or in a few seconds.",
+        };
+      }
       if (isGeminiUnavailableError(error)) {
         return {
           error:
@@ -647,6 +655,12 @@ export const evaluateAnswerFn = createServerFn({
 
       if (isGeminiQuotaError(error)) {
         return { error: "Daily AI quota reached. Please try again tomorrow." };
+      }
+      if (isGeminiTransientError(error)) {
+        return {
+          error:
+            "The AI service hit a temporary issue while evaluating the answer. Please try again now or in a few seconds.",
+        };
       }
       if (isGeminiUnavailableError(error)) {
         return {
@@ -846,6 +860,40 @@ export const getCategorizedTopicsFn = createServerFn({
     } catch (error) {
       console.error("Categorized topics fetch error:", error);
       return { error: "Failed to fetch categorized topics", categories: [] };
+    }
+  });
+
+export const askJagguFn = createServerFn({
+  method: "POST",
+})
+  .validator((data: { prompt?: string; subject?: string; imageDataUrls?: string[]; previousMessage?: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        return { error: "Unauthorized" };
+      }
+
+      const prompt = data.prompt?.trim();
+      const subject = data.subject?.trim() || "Computer Science";
+      const imageDataUrls = Array.isArray(data.imageDataUrls) ? data.imageDataUrls.filter(Boolean) : [];
+      const previousMessage = typeof data.previousMessage === "string" && data.previousMessage.trim() ? data.previousMessage.trim() : undefined;
+
+      if (!prompt && imageDataUrls.length === 0) {
+        return { error: "Please enter a question or upload an image" };
+      }
+
+      const reply = await generateStudyHelpReply({
+        prompt,
+        subject,
+        imageDataUrls,
+        previousMessage,
+      });
+
+      return { reply };
+    } catch (error) {
+      console.error("Jaggu assistant error:", error);
+      return { error: "Failed to get an answer from Jaggu" };
     }
   });
 
