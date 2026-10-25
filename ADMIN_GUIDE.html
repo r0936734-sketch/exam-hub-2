@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Hub - Admin Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .subtitle {
+            color: #0066cc;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+            border-left: 4px solid #0066cc;
+            padding-left: 15px;
+        }
+        
+        h3 {
+            color: #0088dd;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .feature-box {
+            background: #f0f7ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .benefit-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .step {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .step-number {
+            font-weight: bold;
+            color: #ff6600;
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #ff9800;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th {
+            background: #0066cc;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .highlight {
+            background: #ffffcc;
+            padding: 2px 6px;
+            border-radius: 2px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .toc {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc li {
+            margin-bottom: 5px;
+        }
+        
+        .toc a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .key-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            background: linear-gradient(135deg, #0066cc 0%, #0088dd 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 Exam Hub</h1>
+            <p>Administrator Guide</p>
+            <p class="subtitle">Comprehensive Guide for Platform Administrators</p>
+        </div>
+
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h3>📑 Table of Contents</h3>
+            <ul>
+                <li><a href="#overview">Platform Overview</a></li>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#admin-dashboard">Admin Dashboard</a></li>
+                <li><a href="#student-management">Student Management</a></li>
+                <li><a href="#test-management">Test Management</a></li>
+                <li><a href="#submissions">Submissions & Evaluations</a></li>
+                <li><a href="#notices">Notices Management</a></li>
+                <li><a href="#benefits">Key Benefits</a></li>
+                <li><a href="#best-practices">Best Practices</a></li>
+            </ul>
+        </div>
+
+        <!-- Overview Section -->
+        <div class="section" id="overview">
+            <h2>🎯 Platform Overview</h2>
+            <p>Exam Hub is a comprehensive online examination and assessment platform designed specifically for <strong>UP LT Grade Computer Science</strong> preparation. It provides administrators with powerful tools to manage students, create tests, evaluate submissions, and track academic progress.</p>
+            
+            <div class="benefit-box">
+                <strong>Purpose:</strong> Streamline exam administration, assessment, and student evaluation for competitive exam preparation.
+            </div>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="section" id="getting-started">
+            <h2>🚀 Getting Started</h2>
+            
+            <h3>Admin Login</h3>
+            <ul>
+                <li>Navigate to the admin login page</li>
+                <li>Enter your <span class="highlight">Admin ID</span> (provided by system administrator)</li>
+                <li>Enter your <span class="highlight">Password</span></li>
+                <li>Click "Sign in as admin"</li>
+                <li>You will be redirected to the Admin Dashboard</li>
+            </ul>
+
+            <div class="feature-box">
+                <strong>🔒 Security Note:</strong> Keep your admin credentials confidential. Never share your password with anyone. The system uses secure session management to protect your account.
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div class="section" id="admin-dashboard">
+            <h2>📈 Admin Dashboard</h2>
+            <p>The Admin Dashboard is your command center for platform-wide oversight and management.</p>
+
+            <h3>Dashboard Overview</h3>
+            <p>The dashboard displays four key metrics:</p>
+            
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Description</th>
+                    <th>Use Case</th>
+                </tr>
+                <tr>
+                    <td><strong>Total Students</strong></td>
+                    <td>Total number of active student accounts</td>
+                    <td>Platform size and enrollment tracking</td>
+                </tr>
+                <tr>
+                    <td><strong>Total Submissions</strong></td>
+                    <td>Cumulative test submissions by all students</td>
+                    <td>Platform activity and usage metrics</td>
+                </tr>
+                <tr>
+                    <td><strong>Pending Evaluations</strong></td>
+                    <td>Number of ungraded submissions awaiting review</td>
+                    <td>Workload management and priority tasks</td>
+                </tr>
+                <tr>
+                    <td><strong>Published Tests</strong></td>
+                    <td>Total number of active tests available to students</td>
+                    <td>Content availability monitoring</td>
+                </tr>
+            </table>
+
+            <h3>Dashboard Sections</h3>
+            <div class="feature-box">
+                <strong>Top Performers Section:</strong> Displays the highest-ranking students based on average marks. Click "View all" to access the complete student management panel.
+            </div>
+            
+            <div class="feature-box">
+                <strong>Pending Evaluations Queue:</strong> Shows submissions awaiting your evaluation. Displays student name, test title, and number of uploaded files. Click "Open queue" to begin evaluating submissions.
+            </div>
+        </div>
+
+        <!-- Student Management -->
+        <div class="section" id="student-management">
+            <h2>👥 Student Management</h2>
+            <p>Manage all student accounts, create new accounts, and control student access to the platform.</p>
+
+            <h3>Creating Student Accounts</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Navigate to the <strong>Students</strong> menu from the sidebar
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Click the <strong>"Add Student"</strong> button
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Enter the student's full name
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Create a strong password for the student account
+            </div>
+            <div class="step">
+                <span class="step-number">5</span>
+                Click <strong>"Create account"</strong> to finalize
+            </div>
+
+            <h3>Searching and Managing Students</h3>
+            <ul>
+                <li><strong>Search Function:</strong> Use the search bar to find students by name or Student ID</li>
+                <li><strong>View Details:</strong> Each student row displays name, user ID, password, and status</li>
+                <li><strong>Toggle Status:</strong> Use the switch to activate/deactivate student accounts</li>
+                <li><strong>Delete Student:</strong> Click the delete button to remove a student (warning: this is permanent)</li>
+            </ul>
+
+            <div class="benefit-box">
+                <strong>💡 Tip:</strong> Provide students with their User ID and Password securely. Ensure each student keeps their credentials confidential.
+            </div>
+        </div>
+
+        <!-- Test Management -->
+        <div class="section" id="test-management">
+            <h2>📝 Test Management</h2>
+            <p>Create, edit, and publish tests with multiple-choice and descriptive questions.</p>
+
+            <h3>Creating a New Test</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Navigate to the <strong>Tests</strong> menu
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Click <strong>"New Test"</strong> button
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Enter the test <strong>Title</strong> (e.g., "Algebra II Midterm")
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Select the <strong>Subject</strong> area
+            </div>
+            <div class="step">
+                <span class="step-number">5</span>
+                Set a <strong>Deadline</strong> for test submission
+            </div>
+
+            <h3>Adding Questions</h3>
+            <p><strong>Two Question Types Supported:</strong></p>
+            <ul>
+                <li><strong>Text Questions:</strong> Enter question text directly or upload an image</li>
+                <li><strong>Image Questions:</strong> Upload question images from your device</li>
+            </ul>
+
+            <div class="step">
+                <span class="step-number">1</span>
+                Click <strong>"Add Question"</strong> to add a new question to your test
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Select question type (Text or Image)
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Enter the question text (or upload image)
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Assign marks/points for this question
+            </div>
+            <div class="step">
+                <span class="step-number">5</span>
+                Repeat for all questions
+            </div>
+
+            <h3>Test Status Management</h3>
+            <table>
+                <tr>
+                    <th>Status</th>
+                    <th>Description</th>
+                    <th>Student Access</th>
+                </tr>
+                <tr>
+                    <td><strong>Draft</strong></td>
+                    <td>Test is being prepared, not yet ready</td>
+                    <td>Not visible to students</td>
+                </tr>
+                <tr>
+                    <td><strong>Published</strong></td>
+                    <td>Test is live and ready for submissions</td>
+                    <td>Visible and available to all students</td>
+                </tr>
+            </table>
+
+            <div class="benefit-box">
+                <strong>📌 Best Practice:</strong> Always create tests in draft mode first. Review all questions and answers before publishing to ensure accuracy.
+            </div>
+        </div>
+
+        <!-- Submissions & Evaluations -->
+        <div class="section" id="submissions">
+            <h2>✅ Submissions & Evaluations</h2>
+            <p>Review and evaluate student test submissions with detailed feedback.</p>
+
+            <h3>Evaluating Submissions</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Navigate to <strong>Evaluations</strong> menu from sidebar
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                View the queue of pending submissions
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Click on a submission to open evaluation interface
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Review student answers (displayed as uploaded images/files)
+            </div>
+            <div class="step">
+                <span class="step-number">5</span>
+                Assign marks out of the total marks for the test
+            </div>
+            <div class="step">
+                <span class="step-number">6</span>
+                Provide constructive feedback for the student
+            </div>
+            <div class="step">
+                <span class="step-number">7</span>
+                Click <strong>"Submit Evaluation"</strong> to finalize
+            </div>
+
+            <h3>Submission Details</h3>
+            <ul>
+                <li><strong>Student Name:</strong> Name of the student who submitted</li>
+                <li><strong>Test Title:</strong> Name of the test submitted</li>
+                <li><strong>Submission Files:</strong> All answer files uploaded by student</li>
+                <li><strong>Timeline:</strong> View when submission was made</li>
+            </ul>
+        </div>
+
+        <!-- Notices Management -->
+        <div class="section" id="notices">
+            <h2>📢 Notices Management</h2>
+            <p>Post important announcements and messages to all students.</p>
+
+            <h3>Creating a Notice</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Navigate to <strong>Notices</strong> from sidebar
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Click <strong>"New Notice"</strong> button
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Type your announcement message
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Click <strong>"Post Notice"</strong> to publish
+            </div>
+
+            <h3>Notice Best Practices</h3>
+            <ul>
+                <li>Keep notices clear and concise</li>
+                <li>Include important deadlines</li>
+                <li>Provide any relevant instructions</li>
+                <li>Use notices for schedule changes or important updates</li>
+                <li>All notices are visible to all students immediately</li>
+            </ul>
+
+            <div class="feature-box">
+                <strong>💬 Notice Types:</strong> Use for test schedules, deadline extensions, platform maintenance notifications, study material updates, and important announcements.
+            </div>
+        </div>
+
+        <!-- Key Benefits -->
+        <div class="section" id="benefits">
+            <h2>✨ Key Benefits of Exam Hub for Admins</h2>
+            
+            <div class="benefit-box">
+                <h3>📊 Centralized Platform Management</h3>
+                <ul>
+                    <li>Single dashboard for all administrative tasks</li>
+                    <li>Real-time statistics and metrics</li>
+                    <li>Easy access to all platform data</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>⏱️ Time-Saving Automation</h3>
+                <ul>
+                    <li>Automatic submission tracking</li>
+                    <li>Bulk student account creation</li>
+                    <li>Streamlined evaluation workflow</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>📈 Better Assessment Management</h3>
+                <ul>
+                    <li>Create tests with mixed question types</li>
+                    <li>Upload images directly into questions</li>
+                    <li>Track submission status and deadlines</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>👁️ Comprehensive Monitoring</h3>
+                <ul>
+                    <li>View student performance metrics</li>
+                    <li>Track top performers and rankings</li>
+                    <li>Monitor pending evaluation queue</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>💬 Direct Communication</h3>
+                <ul>
+                    <li>Post notices to all students instantly</li>
+                    <li>Share important updates and announcements</li>
+                    <li>No need for external communication tools</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>🔒 Secure Access Control</h3>
+                <ul>
+                    <li>Admin-only features restricted to authorized users</li>
+                    <li>Secure login with credentials</li>
+                    <li>Session management and logout options</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Best Practices -->
+        <div class="section" id="best-practices">
+            <h2>💡 Best Practices & Tips</h2>
+
+            <h3>Student Management</h3>
+            <ul>
+                <li>Create student accounts at the beginning of each term/batch</li>
+                <li>Use standardized naming conventions for easy identification</li>
+                <li>Deactivate accounts for students who are no longer active</li>
+                <li>Keep a backup record of student credentials</li>
+            </ul>
+
+            <h3>Test Creation</h3>
+            <ul>
+                <li>Start with draft mode to allow for revisions</li>
+                <li>Ensure all questions have clear, unambiguous wording</li>
+                <li>Verify image uploads are clear and readable</li>
+                <li>Set realistic deadlines that allow students adequate time</li>
+                <li>Test the platform yourself before publishing tests</li>
+            </ul>
+
+            <h3>Evaluation Process</h3>
+            <ul>
+                <li>Check pending evaluations regularly</li>
+                <li>Provide constructive and detailed feedback</li>
+                <li>Be consistent in marking criteria across all submissions</li>
+                <li>Evaluate submissions promptly so students get timely feedback</li>
+            </ul>
+
+            <h3>Communication</h3>
+            <ul>
+                <li>Post important notices in advance (not last minute)</li>
+                <li>Use clear, professional language in all communications</li>
+                <li>Inform students of any system maintenance or downtime</li>
+                <li>Respond to student concerns promptly</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Exam Hub - Administrator Guide</strong></p>
+            <p>For technical support or questions, please contact your system administrator.</p>
+            <p>© 2024 Exam Hub Platform. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Hub - Complete Platform Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 50px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+        
+        .header p {
+            font-size: 1.3em;
+            color: #666;
+        }
+        
+        .tagline {
+            color: #667eea;
+            font-size: 1em;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        
+        .intro-section {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .intro-section p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 15px;
+        }
+        
+        h2 {
+            color: #667eea;
+            margin-top: 40px;
+            margin-bottom: 25px;
+            font-size: 2em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        
+        .guide-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .guide-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .guide-card:hover {
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+        
+        .guide-card.admin {
+            border-top: 4px solid #ff6b6b;
+        }
+        
+        .guide-card.user {
+            border-top: 4px solid #4ecdc4;
+        }
+        
+        .guide-card h3 {
+            margin-top: 0;
+        }
+        
+        .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .guide-card ul {
+            list-style: none;
+            margin: 20px 0;
+        }
+        
+        .guide-card li {
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .guide-card li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .download-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .download-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature-item {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            text-align: center;
+        }
+        
+        .feature-item .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .feature-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .feature-item p {
+            font-size: 0.95em;
+            color: #666;
+            margin: 0;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .comparison-table tr:hover {
+            background: #f0f4ff;
+        }
+        
+        .benefits-box {
+            background: linear-gradient(135deg, #4ecdc415 0%, #44a08d15 100%);
+            border-left: 5px solid #4ecdc4;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        
+        .benefits-box h3 {
+            color: #4ecdc4;
+            margin-top: 0;
+        }
+        
+        .benefits-box ul {
+            margin-left: 20px;
+        }
+        
+        .benefits-box li {
+            margin-bottom: 10px;
+        }
+        
+        .faq-section {
+            margin: 30px 0;
+        }
+        
+        .faq-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .faq-item strong {
+            color: #667eea;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+            text-align: center;
+            color: #666;
+        }
+        
+        .footer p {
+            margin: 10px 0;
+        }
+        
+        .highlight-box {
+            background: #fffacd;
+            border-left: 5px solid #ffd700;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .guide-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+            .download-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎓 Exam Hub</h1>
+            <p>Complete Platform Documentation & User Guides</p>
+            <p class="tagline">Everything You Need to Know About Using Exam Hub</p>
+        </div>
+
+        <!-- Introduction -->
+        <div class="intro-section">
+            <p>
+                <strong>Welcome to Exam Hub</strong> - Your comprehensive online examination and assessment platform designed for <strong>UP LT Grade Computer Science</strong> preparation. Whether you're an administrator managing students and tests, or a student preparing for your exams, this platform has everything you need.
+            </p>
+            <p>
+                Below you'll find detailed guides for both administrators and students, along with comprehensive information about all platform features and benefits.
+            </p>
+        </div>
+
+        <!-- Platform Overview -->
+        <h2>📋 Platform Overview</h2>
+        <p>Exam Hub is a modern, web-based examination platform that streamlines test administration, student assessment, and academic progress tracking. The platform is designed to be intuitive, secure, and accessible from anywhere.</p>
+
+        <!-- Features Grid -->
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="icon">📊</div>
+                <h4>Dashboard Analytics</h4>
+                <p>Real-time statistics and performance metrics at your fingertips</p>
+            </div>
+            <div class="feature-item">
+                <div class="icon">📝</div>
+                <h4>Test Management</h4>
+                <p>Create and publish tests with multiple question types</p>
+            </div>
+            <div class="feature-item">
+                <div class="icon">✅</div>
+                <h4>Easy Submissions</h4>
+                <p>Students can submit answers as image files</p>
+            </div>
+            <div class="feature-item">
+                <div class="icon">🏆</div>
+                <h4>Leaderboards</h4>
+                <p>Compete fairly and track progress against peers</p>
+            </div>
+            <div class="feature-item">
+                <div class="icon">📢</div>
+                <h4>Instant Notifications</h4>
+                <p>Post announcements and keep students informed</p>
+            </div>
+            <div class="feature-item">
+                <div class="icon">🔒</div>
+                <h4>Secure Access</h4>
+                <p>Role-based authentication and session management</p>
+            </div>
+        </div>
+
+        <!-- Available Guides Section -->
+        <h2>📚 Available Documentation</h2>
+        
+        <div class="guide-section">
+            <!-- Admin Guide Card -->
+            <div class="guide-card admin">
+                <div class="icon">👨‍💼</div>
+                <h3>Administrator Guide</h3>
+                <p>Comprehensive guide for system administrators and instructors managing the platform.</p>
+                
+                <strong>What You'll Learn:</strong>
+                <ul>
+                    <li>Login and platform navigation</li>
+                    <li>Admin dashboard features</li>
+                    <li>Student account management</li>
+                    <li>Test creation and publishing</li>
+                    <li>Evaluating submissions</li>
+                    <li>Managing notices</li>
+                    <li>Analytics and reporting</li>
+                    <li>Best practices</li>
+                </ul>
+                
+                <a href="ADMIN_GUIDE.html" class="download-button" target="_blank">📖 Read Admin Guide</a>
+                <p style="margin-top: 15px; color: #666; font-size: 0.9em;">
+                    Right-click → Save Link As to download as PDF or print for reference
+                </p>
+            </div>
+
+            <!-- User Guide Card -->
+            <div class="guide-card user">
+                <div class="icon">👨‍🎓</div>
+                <h3>Student User Guide</h3>
+                <p>Complete guide for students learning how to use the Exam Hub platform.</p>
+                
+                <strong>What You'll Learn:</strong>
+                <ul>
+                    <li>Getting started and login</li>
+                    <li>Dashboard navigation</li>
+                    <li>Accessing tests</li>
+                    <li>Submitting answers</li>
+                    <li>Checking results</li>
+                    <li>Using the leaderboard</li>
+                    <li>Profile management</li>
+                    <li>Study tips and best practices</li>
+                </ul>
+                
+                <a href="USER_GUIDE.html" class="download-button" target="_blank">📖 Read Student Guide</a>
+                <p style="margin-top: 15px; color: #666; font-size: 0.9em;">
+                    Right-click → Save Link As to download as PDF or print for reference
+                </p>
+            </div>
+        </div>
+
+        <!-- Key Features Comparison -->
+        <h2>🎯 Administrator Features vs Student Features</h2>
+        <table class="comparison-table">
+            <tr>
+                <th>Feature Area</th>
+                <th>Admin Capabilities</th>
+                <th>Student Access</th>
+            </tr>
+            <tr>
+                <td><strong>Authentication</strong></td>
+                <td>Admin login with credentials</td>
+                <td>Student login with ID and password</td>
+            </tr>
+            <tr>
+                <td><strong>Dashboard</strong></td>
+                <td>Platform overview with 4 key metrics</td>
+                <td>Personal statistics and performance</td>
+            </tr>
+            <tr>
+                <td><strong>User Management</strong></td>
+                <td>Create, edit, delete student accounts</td>
+                <td>View own profile only</td>
+            </tr>
+            <tr>
+                <td><strong>Tests</strong></td>
+                <td>Create and publish tests with questions</td>
+                <td>View and attempt available tests</td>
+            </tr>
+            <tr>
+                <td><strong>Submissions</strong></td>
+                <td>Review and evaluate all submissions</td>
+                <td>Submit answers, view feedback</td>
+            </tr>
+            <tr>
+                <td><strong>Leaderboard</strong></td>
+                <td>View performance data (admin dashboard)</td>
+                <td>See global rankings with full details</td>
+            </tr>
+            <tr>
+                <td><strong>Notices</strong></td>
+                <td>Post and manage announcements</td>
+                <td>View all notices</td>
+            </tr>
+            <tr>
+                <td><strong>Analytics</strong></td>
+                <td>Full platform analytics and statistics</td>
+                <td>Personal performance analytics</td>
+            </tr>
+        </table>
+
+        <!-- Core Benefits -->
+        <h2>💎 Key Benefits of Exam Hub</h2>
+        
+        <div class="benefits-box">
+            <h3>For Administrators</h3>
+            <ul>
+                <li><strong>Centralized Management:</strong> All administrative tasks from one dashboard</li>
+                <li><strong>Time Savings:</strong> Automated student management and test administration</li>
+                <li><strong>Better Assessment:</strong> Create comprehensive tests with multiple question types</li>
+                <li><strong>Performance Tracking:</strong> Monitor student progress with real-time analytics</li>
+                <li><strong>Easy Communication:</strong> Post announcements to students instantly</li>
+                <li><strong>Secure Operations:</strong> Role-based access control and session management</li>
+            </ul>
+        </div>
+
+        <div class="benefits-box">
+            <h3>For Students</h3>
+            <ul>
+                <li><strong>Fair Assessment:</strong> Transparent and consistent evaluation criteria</li>
+                <li><strong>Progress Tracking:</strong> Monitor your performance with detailed analytics</li>
+                <li><strong>Competitive Learning:</strong> Healthy competition through leaderboards</li>
+                <li><strong>Expert Feedback:</strong> Constructive comments on your submissions</li>
+                <li><strong>Flexible Access:</strong> Attempt tests anytime, from anywhere</li>
+                <li><strong>Goal Setting:</strong> Benchmark your progress and set improvement targets</li>
+            </ul>
+        </div>
+
+        <!-- Getting Started Quick Guide -->
+        <h2>🚀 Quick Start Guide</h2>
+        
+        <h3>For Administrators:</h3>
+        <div style="background: #f0f4ff; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <ol style="margin-left: 20px;">
+                <li>Open <strong>Admin Login</strong> page</li>
+                <li>Enter your <strong>Admin ID</strong> and <strong>Password</strong></li>
+                <li>Click <strong>Sign in as admin</strong></li>
+                <li>You'll see your <strong>Admin Dashboard</strong></li>
+                <li>Use the sidebar to navigate to:<br/>
+                    • Students (manage accounts)<br/>
+                    • Tests (create and publish)<br/>
+                    • Evaluations (grade submissions)<br/>
+                    • Notices (post announcements)</li>
+            </ol>
+        </div>
+
+        <h3>For Students:</h3>
+        <div style="background: #f0f4ff; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <ol style="margin-left: 20px;">
+                <li>Open <strong>Student Login</strong> page</li>
+                <li>Enter your <strong>Student ID</strong> and <strong>Password</strong></li>
+                <li>Click <strong>Sign in as student</strong></li>
+                <li>You'll see your <strong>Dashboard</strong> with your statistics</li>
+                <li>Use the main menu to:<br/>
+                    • View Available Tests<br/>
+                    • Submit Your Answers<br/>
+                    • Check Leaderboard<br/>
+                    • Read Notices</li>
+            </ol>
+        </div>
+
+        <!-- FAQ Section -->
+        <h2>❓ Frequently Asked Questions</h2>
+        
+        <div class="faq-item">
+            <strong>Q: How do I access the guides?</strong><br/>
+            A: Click the "Read Admin Guide" or "Read Student Guide" buttons above to open the HTML documents. You can print them or save them as PDFs using your browser's save/print function.
+        </div>
+
+        <div class="faq-item">
+            <strong>Q: Can I save these guides as PDF?</strong><br/>
+            A: Yes! Open the guide in your browser, press Ctrl+P (or Cmd+P on Mac), and choose "Save as PDF" from the print dialog.
+        </div>
+
+        <div class="faq-item">
+            <strong>Q: How do I print the guides?</strong><br/>
+            A: Open the guide in your browser, press Ctrl+P (or Cmd+P on Mac), and select your printer to print.
+        </div>
+
+        <div class="faq-item">
+            <strong>Q: Can both guides be used offline?</strong><br/>
+            A: Yes! Save the HTML files to your computer and open them with any web browser. They work completely offline.
+        </div>
+
+        <div class="faq-item">
+            <strong>Q: Which guide should I read?</strong><br/>
+            A: Administrators should read the <strong>Admin Guide</strong>. Students should read the <strong>Student Guide</strong>. Both guides are comprehensive and specific to each role.
+        </div>
+
+        <div class="faq-item">
+            <strong>Q: Are there video tutorials available?</strong><br/>
+            A: These HTML guides are comprehensive. For additional support, contact your system administrator or instructor.
+        </div>
+
+        <!-- Important Notes -->
+        <div class="highlight-box">
+            <h3>📌 Important Notes</h3>
+            <ul>
+                <li>Both guides are comprehensive and self-contained - they cover all essential information</li>
+                <li>Read through the appropriate guide completely before using the platform</li>
+                <li>Save these guides for future reference</li>
+                <li>Share with other users who might benefit (students with student guide, admins with admin guide)</li>
+                <li>If you encounter technical issues, contact your system administrator</li>
+            </ul>
+        </div>
+
+        <!-- Platform Information -->
+        <h2>ℹ️ About Exam Hub</h2>
+        <p>
+            <strong>Exam Hub</strong> is specifically designed for <strong>UP LT Grade Computer Science</strong> examination preparation. The platform combines modern web technologies with user-friendly design to create a seamless assessment experience for both administrators and students.
+        </p>
+        <p>
+            The platform supports:
+        </p>
+        <ul>
+            <li>Multiple question types (text and image-based questions)</li>
+            <li>Flexible test scheduling and deadline management</li>
+            <li>Detailed evaluation and feedback system</li>
+            <li>Comprehensive leaderboard rankings</li>
+            <li>Real-time notification system</li>
+            <li>Secure, role-based access control</li>
+        </ul>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Exam Hub - Complete Documentation</strong></p>
+            <p>Version 1.0 | Platform for UP LT Grade Computer Prep</p>
+            <p>📧 For support, contact your institution's administrator</p>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #999;">© 2024 Exam Hub Platform. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

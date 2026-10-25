@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Hub - Student User Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #2196F3;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            color: #2196F3;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .subtitle {
+            color: #2196F3;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        h2 {
+            color: #2196F3;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+            border-left: 4px solid #2196F3;
+            padding-left: 15px;
+        }
+        
+        h3 {
+            color: #1976D2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .feature-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .benefit-box {
+            background: #c8e6c9;
+            border-left: 4px solid #4caf50;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .tip-box {
+            background: #fff9c4;
+            border-left: 4px solid #fbc02d;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        ul, ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .step {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .step-number {
+            font-weight: bold;
+            color: #ff6600;
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #ff9800;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th {
+            background: #2196F3;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .highlight {
+            background: #ffffcc;
+            padding: 2px 6px;
+            border-radius: 2px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .toc {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc li {
+            margin-bottom: 5px;
+        }
+        
+        .toc a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .key-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎓 Exam Hub</h1>
+            <p>Student User Guide</p>
+            <p class="subtitle">Complete Guide for Students Using the Platform</p>
+        </div>
+
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h3>📑 Table of Contents</h3>
+            <ul>
+                <li><a href="#welcome">Welcome to Exam Hub</a></li>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#dashboard">Your Dashboard</a></li>
+                <li><a href="#taking-tests">Taking Tests</a></li>
+                <li><a href="#submissions">Submitting Answers</a></li>
+                <li><a href="#leaderboard">Leaderboard</a></li>
+                <li><a href="#profile">Your Profile</a></li>
+                <li><a href="#notices">Staying Updated</a></li>
+                <li><a href="#benefits">Benefits of Using Exam Hub</a></li>
+                <li><a href="#tips">Study Tips & Best Practices</a></li>
+            </ul>
+        </div>
+
+        <!-- Welcome Section -->
+        <div class="section" id="welcome">
+            <h2>👋 Welcome to Exam Hub</h2>
+            <p>Exam Hub is your personal online examination and learning platform designed specifically for <strong>UP LT Grade Computer Science</strong> preparation. Whether you're preparing for competitive exams or regular assessments, this platform provides everything you need to excel.</p>
+            
+            <div class="feature-box">
+                <strong>🎯 Our Mission:</strong> To provide a comprehensive, fair, and efficient platform for exam preparation that helps you track your progress and identify areas for improvement.
+            </div>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="section" id="getting-started">
+            <h2>🚀 Getting Started</h2>
+            
+            <h3>Login to Your Account</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Go to the login page
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Enter your <span class="highlight">Student ID</span> (provided by your institution)
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Enter your <span class="highlight">Password</span> (provided by your administrator)
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Click <strong>"Sign in as student"</strong>
+            </div>
+            <div class="step">
+                <span class="step-number">5</span>
+                You'll be taken to your personalized dashboard
+            </div>
+
+            <div class="tip-box">
+                <strong>🔐 Security Reminder:</strong> Keep your Student ID and password confidential. Never share your login credentials with anyone. Change your password regularly for better security.
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="section" id="dashboard">
+            <h2>📊 Your Dashboard</h2>
+            <p>Your dashboard is your personal command center where you can see your performance at a glance.</p>
+
+            <h3>Dashboard Overview</h3>
+            <p>Your dashboard displays four key performance indicators:</p>
+            
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Description</th>
+                    <th>Why It Matters</th>
+                </tr>
+                <tr>
+                    <td><strong>Average Marks</strong></td>
+                    <td>Your average score across all completed tests</td>
+                    <td>Shows your overall performance level</td>
+                </tr>
+                <tr>
+                    <td><strong>Tests Attempted</strong></td>
+                    <td>Total number of tests you have submitted</td>
+                    <td>Tracks your practice volume and consistency</td>
+                </tr>
+                <tr>
+                    <td><strong>Current Rank</strong></td>
+                    <td>Your position in the global leaderboard</td>
+                    <td>Shows where you stand compared to peers</td>
+                </tr>
+                <tr>
+                    <td><strong>Top Score</strong></td>
+                    <td>Your highest score across all tests</td>
+                    <td>Demonstrates your best performance potential</td>
+                </tr>
+            </table>
+
+            <h3>Dashboard Sections</h3>
+            <div class="feature-box">
+                <strong>📢 Announcements:</strong> Important messages from your administrators will appear here. Check regularly for test schedules, deadline changes, and important updates.
+            </div>
+            
+            <div class="feature-box">
+                <strong>📜 Recent Scores:</strong> View your last 5 evaluations with detailed feedback from your instructors. This helps you track improvement and identify patterns.
+            </div>
+
+            <div class="feature-box">
+                <strong>🔔 New Tests Alert:</strong> When new tests are available or tests are updated, you'll see alerts on your dashboard to stay informed.
+            </div>
+        </div>
+
+        <!-- Taking Tests -->
+        <div class="section" id="taking-tests">
+            <h2>📝 Taking Tests</h2>
+            <p>Tests are the core of your learning experience on Exam Hub. Here's how to access and attempt them.</p>
+
+            <h3>Accessing Available Tests</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Click on <strong>"Tests"</strong> in the main navigation menu
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                You'll see a list of all available tests
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Each test card shows the title, subject, number of questions, and deadline
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Check the test status: "Pending" = not yet attempted, "Attempted" = already submitted
+            </div>
+
+            <h3>Test Information</h3>
+            <p>For each test, you'll see:</p>
+            <ul>
+                <li><strong>Test Title:</strong> Name of the exam</li>
+                <li><strong>Subject:</strong> Category or topic area</li>
+                <li><strong>Questions:</strong> Total number of questions in the test</li>
+                <li><strong>Deadline:</strong> Last date and time to submit your answers</li>
+                <li><strong>Created By:</strong> Your instructor's name</li>
+            </ul>
+
+            <h3>Understanding Question Types</h3>
+            <table>
+                <tr>
+                    <th>Question Type</th>
+                    <th>Format</th>
+                    <th>How to Answer</th>
+                </tr>
+                <tr>
+                    <td><strong>Text Questions</strong></td>
+                    <td>Written questions with text and/or images</td>
+                    <td>Read carefully and prepare your answer</td>
+                </tr>
+                <tr>
+                    <td><strong>Image Questions</strong></td>
+                    <td>Questions presented as images or diagrams</td>
+                    <td>View the image and understand the context</td>
+                </tr>
+            </table>
+
+            <div class="tip-box">
+                <strong>⏰ Time Management Tip:</strong> Note the deadline for each test. Don't wait until the last moment to submit. We recommend attempting tests at least a day before the deadline to avoid last-minute technical issues.
+            </div>
+        </div>
+
+        <!-- Submitting Answers -->
+        <div class="section" id="submissions">
+            <h2>✏️ Submitting Your Answers</h2>
+            <p>Once you've answered the questions, you need to submit your responses to the platform.</p>
+
+            <h3>How to Submit Answers</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Click on a test to open it
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                Review all questions carefully
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Prepare your answers (write on paper, take photos, or scan documents)
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Click the <strong>"Upload Answer Files"</strong> button
+            </div>
+            <div class="step">
+                <span class="step-number">5</span>
+                Select image files of your answer sheets
+            </div>
+            <div class="step">
+                <span class="step-number">6</span>
+                You can upload multiple files for different answer sheets
+            </div>
+            <div class="step">
+                <span class="step-number">7</span>
+                Click <strong>"Submit"</strong> to finalize your submission
+            </div>
+
+            <h3>Submission Requirements</h3>
+            <ul>
+                <li><strong>File Format:</strong> Submit images (JPG, PNG format recommended)</li>
+                <li><strong>Image Quality:</strong> Ensure images are clear and legible</li>
+                <li><strong>Content Clarity:</strong> Your handwriting must be readable by evaluators</li>
+                <li><strong>Complete Answers:</strong> Include answers to all questions you attempt</li>
+                <li><strong>Deadline Compliance:</strong> Submit before the test deadline</li>
+            </ul>
+
+            <div class="feature-box">
+                <strong>📸 Submission Tips:</strong>
+                <ul>
+                    <li>Take photos in good lighting conditions</li>
+                    <li>Ensure the entire answer sheet is visible in the frame</li>
+                    <li>Avoid shadows and reflections in photos</li>
+                    <li>Upload files in the correct order (Question 1, 2, 3, etc.)</li>
+                </ul>
+            </div>
+
+            <h3>After Submission</h3>
+            <ul>
+                <li>You'll receive a confirmation message</li>
+                <li>Your submission status will change to "Evaluated" once the instructor grades it</li>
+                <li>Check your "My Submissions" section to view feedback</li>
+                <li>Your marks will be added to your dashboard automatically</li>
+                <li>You'll see the instructor's comments on your answers</li>
+            </ul>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="section" id="leaderboard">
+            <h2>🏆 Leaderboard</h2>
+            <p>Compete fairly and track your progress against your peers.</p>
+
+            <h3>Understanding the Leaderboard</h3>
+            <p>The global leaderboard ranks all students based on their average marks. Here's what you need to know:</p>
+
+            <table>
+                <tr>
+                    <th>Column</th>
+                    <th>Meaning</th>
+                </tr>
+                <tr>
+                    <td><strong>Rank</strong></td>
+                    <td>Your position in the rankings (1 = top performer)</td>
+                </tr>
+                <tr>
+                    <td><strong>Student Name</strong></td>
+                    <td>Name of the student</td>
+                </tr>
+                <tr>
+                    <td><strong>User ID</strong></td>
+                    <td>Unique student identifier</td>
+                </tr>
+                <tr>
+                    <td><strong>Tests Attempted</strong></td>
+                    <td>Number of tests completed by the student</td>
+                </tr>
+                <tr>
+                    <td><strong>Average Marks</strong></td>
+                    <td>Average score across all completed tests</td>
+                </tr>
+            </table>
+
+            <h3>Using the Leaderboard</h3>
+            <ul>
+                <li><strong>Find Yourself:</strong> Look for your name in the list (highlighted in the leaderboard view)</li>
+                <li><strong>Track Progress:</strong> See how your rank changes as you complete more tests</li>
+                <li><strong>Set Goals:</strong> Aim to improve your rank by increasing your average score</li>
+                <li><strong>Search:</strong> Use the search function to find specific students</li>
+            </ul>
+
+            <div class="benefit-box">
+                <strong>💪 Motivation:</strong> The leaderboard is designed to motivate and encourage healthy competition. Use it as inspiration to study harder and improve your scores. Remember, every student started at the bottom!
+            </div>
+        </div>
+
+        <!-- Profile -->
+        <div class="section" id="profile">
+            <h2>👤 Your Profile</h2>
+            <p>View and manage your personal information.</p>
+
+            <h3>Profile Information</h3>
+            <ul>
+                <li><strong>Student ID:</strong> Your unique identifier on the platform</li>
+                <li><strong>Name:</strong> Your full name as registered</li>
+                <li><strong>Average Marks:</strong> Your current average score</li>
+                <li><strong>Current Rank:</strong> Your position in the leaderboard</li>
+                <li><strong>Tests Attempted:</strong> Total number of tests you've completed</li>
+                <li><strong>Member Since:</strong> Date you joined the platform</li>
+            </ul>
+
+            <h3>Profile Features</h3>
+            <div class="feature-box">
+                <strong>📊 Statistics Summary:</strong> At a glance view of your overall performance metrics and academic progress.
+            </div>
+
+            <div class="feature-box">
+                <strong>🔐 Security:</strong> Your profile information is private and secure. Only you and your instructors can see your grades and performance data.
+            </div>
+        </div>
+
+        <!-- Notices -->
+        <div class="section" id="notices">
+            <h2>📢 Staying Updated</h2>
+            <p>Stay informed with the latest announcements and important information.</p>
+
+            <h3>Viewing Notices</h3>
+            <div class="step">
+                <span class="step-number">1</span>
+                Click <strong>"Notices"</strong> in the main menu
+            </div>
+            <div class="step">
+                <span class="step-number">2</span>
+                View all announcements from your instructors
+            </div>
+            <div class="step">
+                <span class="step-number">3</span>
+                Notices appear with the most recent first
+            </div>
+            <div class="step">
+                <span class="step-number">4</span>
+                Check back regularly for important updates
+            </div>
+
+            <h3>Types of Notices You'll Receive</h3>
+            <ul>
+                <li><strong>Test Schedules:</strong> When and which tests are available</li>
+                <li><strong>Deadline Changes:</strong> Extensions or modifications to test deadlines</li>
+                <li><strong>Important Announcements:</strong> System maintenance or platform updates</li>
+                <li><strong>Study Material:</strong> Links to reference materials and study guides</li>
+                <li><strong>Performance Updates:</strong> Information about your progress</li>
+            </ul>
+
+            <div class="tip-box">
+                <strong>📌 Pro Tip:</strong> Check the Notices section at least once a day, especially during exam periods. Mark important notice dates in your personal calendar to ensure you don't miss deadlines.
+            </div>
+        </div>
+
+        <!-- Benefits Section -->
+        <div class="section" id="benefits">
+            <h2>✨ Key Benefits of Exam Hub for Students</h2>
+            
+            <div class="benefit-box">
+                <h3>🎯 Structured Learning Path</h3>
+                <ul>
+                    <li>Follow a curated curriculum designed by expert instructors</li>
+                    <li>Access diverse question types and difficulty levels</li>
+                    <li>Progress at your own pace with flexible scheduling</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>📊 Real-Time Progress Tracking</h3>
+                <ul>
+                    <li>Monitor your performance with instant feedback</li>
+                    <li>Understand your strengths and weaknesses</li>
+                    <li>Track improvement over time with detailed statistics</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>🏆 Fair & Transparent Evaluation</h3>
+                <ul>
+                    <li>Consistent evaluation criteria for all students</li>
+                    <li>Detailed feedback on your submissions</li>
+                    <li>Objective ranking system based on performance</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>💬 Direct Instructor Feedback</h3>
+                <ul>
+                    <li>Receive constructive comments on your answers</li>
+                    <li>Understand where you made mistakes</li>
+                    <li>Get guidance for improvement from experts</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>🌍 Competitive Environment</h3>
+                <ul>
+                    <li>See how you compare with peers through leaderboards</li>
+                    <li>Healthy competition motivates better performance</li>
+                    <li>Benchmark your progress against others</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>📱 Accessible Anytime, Anywhere</h3>
+                <ul>
+                    <li>Access the platform from any device with internet</li>
+                    <li>Work at your own convenient time</li>
+                    <li>No geographic or time zone restrictions</li>
+                </ul>
+            </div>
+
+            <div class="benefit-box">
+                <h3>📈 Comprehensive Analytics</h3>
+                <ul>
+                    <li>Detailed performance metrics and trends</li>
+                    <li>Identify topics that need more practice</li>
+                    <li>Make data-driven study decisions</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Study Tips -->
+        <div class="section" id="tips">
+            <h2>💡 Study Tips & Best Practices</h2>
+
+            <h3>Preparation Strategy</h3>
+            <ul>
+                <li><strong>Start Early:</strong> Don't wait until the last day to attempt tests</li>
+                <li><strong>Read Carefully:</strong> Take time to understand questions before answering</li>
+                <li><strong>Organize Answers:</strong> Write clearly and number your responses properly</li>
+                <li><strong>Time Management:</strong> Allocate time appropriately for each question</li>
+                <li><strong>Review Before Submitting:</strong> Double-check your work before final submission</li>
+            </ul>
+
+            <h3>Effective Learning</h3>
+            <ul>
+                <li><strong>Regular Practice:</strong> Attempt all available tests regularly, not just before exams</li>
+                <li><strong>Learn from Mistakes:</strong> Review feedback carefully to understand errors</li>
+                <li><strong>Track Progress:</strong> Monitor your dashboard to see improvement</li>
+                <li><strong>Set Goals:</strong> Target specific rank or average marks to work towards</li>
+                <li><strong>Study Consistency:</strong> Dedicate regular time for exam preparation</li>
+            </ul>
+
+            <h3>Technical Best Practices</h3>
+            <ul>
+                <li><strong>Stable Internet:</strong> Ensure good internet connectivity before attempting tests</li>
+                <li><strong>Clear Photos:</strong> Take high-quality photos of answer sheets</li>
+                <li><strong>Proper Lighting:</strong> Use good lighting when photographing answers</li>
+                <li><strong>File Organization:</strong> Keep answer files in logical order</li>
+                <li><strong>Backup Submissions:</strong> Submit early to avoid last-minute technical issues</li>
+            </ul>
+
+            <h3>Performance Optimization</h3>
+            <ul>
+                <li>Understand the marking scheme for each test</li>
+                <li>Focus on high-value questions (higher marks)</li>
+                <li>Analyze the leaderboard to see top performers' averages</li>
+                <li>Study previous feedback patterns to improve faster</li>
+                <li>Build a study schedule based on your available time</li>
+            </ul>
+
+            <div class="tip-box">
+                <strong>🎓 Success Formula:</strong> Consistency + Quality Practice + Feedback Analysis + Continuous Improvement = Success
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="section" id="faq">
+            <h2>❓ Common Questions & Answers</h2>
+            
+            <h3>Can I attempt a test multiple times?</h3>
+            <p>No, each test can typically be submitted only once. Make sure you're ready before submitting your final answers.</p>
+
+            <h3>What happens if I miss a deadline?</h3>
+            <p>You won't be able to submit answers after the deadline passes. The system closes submissions automatically. Contact your instructor if you have a valid reason for missing the deadline.</p>
+
+            <h3>How long does it take to get my evaluation?</h3>
+            <p>Evaluation time depends on instructor workload. Typically, expect feedback within 3-7 days. Check your submissions regularly for updates.</p>
+
+            <h3>Can I change my answer after submitting?</h3>
+            <p>No, once submitted, your answers cannot be changed. The submission is final and locked.</p>
+
+            <h3>How is my average calculated?</h3>
+            <p>Your average is calculated by dividing the total marks you've earned across all completed tests by the total number of tests attempted.</p>
+
+            <h3>How often does the leaderboard update?</h3>
+            <p>The leaderboard updates in real-time as evaluations are completed and new scores are added to the system.</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Exam Hub - Student User Guide</strong></p>
+            <p>For technical support or questions, please contact your administrator or instructor.</p>
+            <p>© 2024 Exam Hub Platform. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

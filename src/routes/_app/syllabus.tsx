@@ -4,8 +4,10 @@ import { BookOpen, CheckCircle2, Circle, Search, X } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/useAuth";
+import { useExamMode } from "@/hooks/useExamMode";
 
 export const Route = createFileRoute("/_app/syllabus")({ component: SyllabusPage });
 
@@ -291,6 +293,7 @@ function levelClasses(value: PrepLevel | undefined, option: PrepLevel) {
 
 function SyllabusPage() {
   const { user } = useAuth();
+  const { mode, setChooserOpen } = useExamMode();
   const [progress, setProgress] = useState<ProgressMap>({});
   const [query, setQuery] = useState("");
 
@@ -313,30 +316,35 @@ function SyllabusPage() {
     });
   };
 
-  const allSubtopics = SYLLABUS.reduce((count, topic) => count + topic.subtopics.length, 0);
+  const syllabus = mode.syllabus;
+  const allSubtopics = syllabus.reduce((count, topic) => count + topic.subtopics.length, 0);
   const complete = Object.values(progress).filter((value) => value === "complete").length;
   const medium = Object.values(progress).filter((value) => value === "medium").length;
   const light = Object.values(progress).filter((value) => value === "light").length;
 
   const filteredSyllabus = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return SYLLABUS;
+    if (!term) return syllabus;
 
-    return SYLLABUS.map((topic) => ({
+    return syllabus.map((topic) => ({
       ...topic,
       subtopics: topic.subtopics.filter(
         (subtopic) =>
           topic.title.toLowerCase().includes(term) || subtopic.toLowerCase().includes(term),
       ),
     })).filter((topic) => topic.subtopics.length > 0);
-  }, [query]);
+  }, [query, syllabus]);
 
   return (
     <div>
       <PageHeader
-        title="Computer Syllabus"
-        description="Track every topic for UP LT Grade Mains Computer preparation."
+        title={`${mode.shortTitle} syllabus`}
+        description={mode.description}
       />
+
+      <Button variant="outline" size="sm" className="mb-5" onClick={() => setChooserOpen(true)}>
+        Change exam mode
+      </Button>
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="border-border/60">

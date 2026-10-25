@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ExamModeProvider } from "@/hooks/useExamMode";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -99,8 +100,10 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Outlet />
-          <Toaster />
+          <ExamModeProvider>
+            <Outlet />
+            <Toaster />
+          </ExamModeProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

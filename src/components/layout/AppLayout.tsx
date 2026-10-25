@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   GraduationCap,
+  ClipboardList,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -23,12 +24,16 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { getStudentNoticesServerFn } from "@/services/student.functions";
+import { useExamMode } from "@/hooks/useExamMode";
+import { EXAM_MODE_LIST } from "@/lib/exam-modes";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
 const studentNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tests", label: "Tests", icon: FileText },
+  { to: "/practice", label: "MCQ Practice", icon: ClipboardList },
   { to: "/syllabus", label: "Syllabus", icon: BookOpen },
   { to: "/notices", label: "Notices", icon: Megaphone },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
@@ -45,6 +50,7 @@ const adminNav: NavItem[] = [
 
 export function AppLayout() {
   const { user, role, token, signOut } = useAuth();
+  const { mode, chooseMode, chooserOpen, setChooserOpen } = useExamMode();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -106,7 +112,7 @@ export function AppLayout() {
             <GraduationCap className="size-5" />
           </div>
           <div>
-            <p className="text-sm font-semibold">UP LT Grade</p>
+            <p className="text-sm font-semibold">{mode.shortTitle}</p>
             <p className="text-xs text-muted-foreground capitalize">Computer {portalRole} portal</p>
           </div>
         </div>
@@ -177,7 +183,7 @@ export function AppLayout() {
                 <div className="size-8 rounded-lg bg-primary text-primary-foreground grid place-items-center">
                   <GraduationCap className="size-4" />
                 </div>
-                <p className="font-semibold">LT Grade Prep</p>
+                <p className="font-semibold">{mode.shortTitle}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="size-4" />
@@ -228,7 +234,7 @@ export function AppLayout() {
             <div className="size-7 rounded-md bg-primary text-primary-foreground grid place-items-center">
               <GraduationCap className="size-4" />
             </div>
-            <span className="font-semibold text-sm">LT Grade Prep</span>
+            <span className="font-semibold text-sm">{mode.shortTitle}</span>
           </div>
           <Button variant="ghost" size="icon" onClick={toggle}>
             {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -296,6 +302,32 @@ export function AppLayout() {
           </div>
         </nav>
       </div>
+
+      <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>What are you preparing for?</DialogTitle>
+            <DialogDescription>
+              Choose an exam mode. It changes the syllabus, practice format, and study guidance for this session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 md:grid-cols-3">
+            {EXAM_MODE_LIST.map((exam) => (
+              <button
+                key={exam.id}
+                type="button"
+                onClick={() => chooseMode(exam.id)}
+                className="rounded-xl border p-4 text-left transition hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <Badge variant={exam.id === mode.id ? "default" : "secondary"}>{exam.format}</Badge>
+                <p className="mt-3 font-semibold">{exam.shortTitle}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{exam.description}</p>
+              </button>
+            ))}
+          </div>
+          <p className="text-center text-xs text-muted-foreground">You can change this by reopening the app or from the syllabus page.</p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

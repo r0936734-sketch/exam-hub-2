@@ -1,8 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/client",
   "framework": null
 }
-  ]
-}
->>>>>>> Stashed changes

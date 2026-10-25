@@ -3,14 +3,17 @@ import { MongoClient, Db } from "mongodb";
 let cachedClient: MongoClient | null = null;
 let cachedDb: Db | null = null;
 
-const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = "exam-hub";
 
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI environment variable is not set");
+function getMongoUri() {
+  const mongoUri = process.env.MONGODB_URI?.trim();
+  if (!mongoUri) {
+    throw new Error(
+      "MONGODB_URI environment variable is not set. Add it to .env, then restart the development server.",
+    );
+  }
+  return mongoUri;
 }
-
-const mongoUri = MONGODB_URI;
 
 function describeMongoConnectionError(error: unknown): Error {
   const message = error instanceof Error ? error.message : String(error);
@@ -31,6 +34,7 @@ export async function connectToDatabase(): Promise<Db> {
   }
 
   if (!cachedClient) {
+    const mongoUri = getMongoUri();
     const client = new MongoClient(mongoUri, {
       serverSelectionTimeoutMS: 10000,
       connectTimeoutMS: 10000,
