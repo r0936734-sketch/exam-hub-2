@@ -109,6 +109,14 @@ export function isGeminiTransientError(error: unknown): boolean {
   return isGeminiFallbackError(error);
 }
 
+export type GeneratedObjectiveMcq = {
+  topic: string;
+  prompt: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+};
+
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -209,6 +217,121 @@ async function streamGeminiTextWithFallback({
   }
 
   throw lastError;
+}
+
+function parseJsonArray(responseText: string): unknown[] {
+  const withoutFences = responseText.replace(/```(?:json)?/gi, "").trim();
+  const match = withoutFences.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error("The AI did not return an MCQ array. Please generate again.");
+  const parsed = JSON.parse(match[0]);
+  if (!Array.isArray(parsed)) throw new Error("The AI returned an invalid MCQ response. Please generate again.");
+  return parsed;
+}
+
+function shuffleWithSeed<T>(values: T[], seed: number): T[] {
+  const result = [...values];
+  let state = seed || 1;
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    const swapIndex = state % (index + 1);
+    [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+  }
+  return result;
+}
+
+function validateObjectiveMcqs(
+  responseText: string,
+  questionCount: number,
+  allowedTopics: string[],
+): GeneratedObjectiveMcq[] {
+  const rawItems = parseJsonArray(responseText);
+  if (rawItems.length !== questionCount) {
+    throw new Error(`The AI returned ${rawItems.length} questions instead of ${questionCount}. Please generate again.`);
+  }
+
+  return rawItems.map((rawItem, index) => {
+    const item = rawItem as Record<string, unknown>;
+    const prompt = typeof item.question === "string" ? item.question.trim() : "";
+    const topic = typeof item.topic === "string" ? item.topic.trim() : "";
+    const options = Array.isArray(item.options)
+      ? item.options.map((option) => (typeof option === "string" ? option.trim() : ""))
+      : [];
+    const correctAnswer = typeof item.correctAnswer === "string" ? item.correctAnswer.trim() : "";
+    const explanation = typeof item.explanation === "string" ? item.explanation.trim() : "";
+    const normalizedOptions = options.map((option) => option.toLocaleLowerCase());
+
+    if (
+      prompt.length < 20 ||
+      options.length !== 4 ||
+      options.some((option) => !option) ||
+      new Set(normalizedOptions).size !== 4 ||
+      !correctAnswer ||
+      !normalizedOptions.includes(correctAnswer.toLocaleLowerCase()) ||
+      explanation.length < 20
+    ) {
+      throw new Error(`Question ${index + 1} did not meet the MCQ quality checks. Please generate again.`);
+    }
+
+    if (/all of the above|none of the above/i.test(options.join(" "))) {
+      throw new Error(`Question ${index + 1} contains an unsafe option pattern. Please generate again.`);
+    }
+
+    const correctOption = options.find(
+      (option) => option.toLocaleLowerCase() === correctAnswer.toLocaleLowerCase(),
+    )!;
+    const optionLengths = options.map((option) => option.length);
+    if (correctOption.length > Math.min(...optionLengths) * 1.9) {
+      throw new Error(`Question ${index + 1} has an answer-length cue. Please generate again.`);
+    }
+
+    const shuffledDistractors = shuffleWithSeed(
+      options.filter((option) => option !== correctOption),
+      index + 17,
+    );
+    const correctIndex = index % 4;
+    shuffledDistractors.splice(correctIndex, 0, correctOption);
+
+    return {
+      topic: allowedTopics.includes(topic) ? topic : allowedTopics[index % allowedTopics.length],
+      prompt,
+      options: shuffledDistractors,
+      correctIndex,
+      explanation,
+    };
+  });
+}
+
+export async function generateObjectiveMcqs({
+  examTitle,
+  topics,
+  questionCount,
+  instructions,
+}: {
+  examTitle: string;
+  topics: Array<{ title: string; subtopics: string[] }>;
+  questionCount: number;
+  instructions?: string;
+}): Promise<GeneratedObjectiveMcq[]> {
+  if (!topics.length || questionCount < 5 || questionCount > 50) {
+    throw new Error("Select at least one topic and request between 5 and 50 questions.");
+  }
+
+  const topicTitles = topics.map((topic) => topic.title);
+  const syllabusBlock = topics
+    .map((topic) => `- ${topic.title}: ${topic.subtopics.join(", ")}`)
+    .join("\n");
+  const prompt = `You are a rigorous Indian competitive-exam MCQ setter.\n\nEXAM: ${examTitle}\nSELECTED TOPICS:\n${syllabusBlock}\nQUESTION COUNT: ${questionCount}\n${instructions?.trim() ? `STUDENT INSTRUCTIONS:\n${instructions.trim()}\n` : ""}\nGenerate exactly ${questionCount} difficult but fair single-correct MCQs. Distribute questions across the selected topics as evenly as their scope permits.\n\nMANDATORY QUALITY RULES:\n1. Every question has exactly four concise, plausible, mutually distinct options.\n2. Do not use all of the above, none of the above, or trick wording.\n3. Keep all option lengths comparable; the correct option must not be conspicuously longer.\n4. Give a precise explanation that states why the correct answer is right.\n5. Do not repeat a concept, stem, or distractor set in this batch.\n6. Use only the selected topics and their listed subtopics.\n7. Set correctAnswer to the exact option text copied character-for-character from options.\n\nReturn ONLY a valid JSON array. Each object must have exactly these keys: topic, question, options, correctAnswer, explanation.`;
+
+  const responseText = await streamGeminiTextWithFallback({
+    models: QUESTION_GENERATION_MODELS,
+    contents: [{ role: "user" as const, parts: [{ text: prompt }] }],
+    operationLabel: "MCQ generation",
+    fallbackMessage: "The first AI model is busy. Switching to the backup model...",
+    startTimeoutMs: QUESTION_STREAM_START_TIMEOUT_MS,
+    chunkTimeoutMs: QUESTION_STREAM_CHUNK_TIMEOUT_MS,
+  });
+
+  return validateObjectiveMcqs(responseText, questionCount, topicTitles);
 }
 
 
