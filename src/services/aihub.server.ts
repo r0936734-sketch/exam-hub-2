@@ -153,7 +153,7 @@ function isGeneratedQuestionUsable(question: string) {
 export const getEvaluationProgressFn = createServerFn({
   method: "POST",
 })
-  .validator((data: { requestId: string }) => data)
+  .inputValidator((data: { requestId: string }) => data)
   .handler(async ({ data }) => {
     if (!isValidRequestId(data.requestId)) {
       return { progress: null };
@@ -222,7 +222,7 @@ export const getAIHubAccessStatusFn = createServerFn({
 export const verifyAIHubPasscodeFn = createServerFn({
   method: "POST",
 })
-  .validator((data: { passcode: string }) => data)
+  .inputValidator((data: { passcode: string }) => data)
   .handler(async ({ data }) => {
     const passcode = data.passcode?.trim();
 
@@ -270,7 +270,7 @@ export const verifyAIHubPasscodeFn = createServerFn({
 export const generateQuestionFn = createServerFn({
   method: "POST",
 })
-  .validator(
+  .inputValidator(
     (data: {
       topic?: string;
       categoryName?: string;
@@ -537,7 +537,7 @@ export const generateQuestionFn = createServerFn({
 export const evaluateAnswerFn = createServerFn({
   method: "POST",
 })
-  .validator(
+  .inputValidator(
     (data: {
       imageUrl: string;
       imageUrls?: string[];
@@ -678,7 +678,7 @@ export const evaluateAnswerFn = createServerFn({
 export const getUserProgressFn = createServerFn({
   method: "POST",
 })
-  .validator((data: string) => data)
+  .inputValidator((data: string) => data)
   .handler(async ({ data: subject }) => {
     try {
       const user = await getCurrentUser();
@@ -717,7 +717,7 @@ export const getUserProgressFn = createServerFn({
 export const getWeakTopicsFn = createServerFn({
   method: "POST",
 })
-  .validator((data: string) => data)
+  .inputValidator((data: string) => data)
   .handler(async ({ data: subject }) => {
     try {
       const user = await getCurrentUser();
@@ -781,7 +781,7 @@ export const getAIHubLeaderboardFn = createServerFn({
 export const getPendingQuestionFn = createServerFn({
   method: "POST",
 })
-  .validator((subject: string) => subject)
+  .inputValidator((subject: string) => subject)
   .handler(async ({ data: subject }): Promise<{ error?: string; question: any | null }> => {
     try {
       const user = await getCurrentUser();
@@ -803,7 +803,7 @@ export const getPendingQuestionFn = createServerFn({
 export const clearPendingQuestionFn = createServerFn({
   method: "POST",
 })
-  .validator((subject: string) => subject)
+  .inputValidator((subject: string) => subject)
   .handler(async ({ data: subject }): Promise<{ error?: string; success?: boolean }> => {
     try {
       const user = await getCurrentUser();
@@ -825,7 +825,7 @@ export const clearPendingQuestionFn = createServerFn({
 export const getSyllabusFn = createServerFn({
   method: "POST",
 })
-  .validator((data: { subject: string }) => data)
+  .inputValidator((data: { subject: string }) => data)
   .handler(async ({ data }) => {
     try {
       const user = await getCurrentUser();
@@ -847,7 +847,7 @@ export const getSyllabusFn = createServerFn({
 export const getCategorizedTopicsFn = createServerFn({
   method: "POST",
 })
-  .validator((data: { subject: string }) => data)
+  .inputValidator((data: { subject: string }) => data)
   .handler(async ({ data }) => {
     try {
       const user = await getCurrentUser();
@@ -866,7 +866,7 @@ export const getCategorizedTopicsFn = createServerFn({
 export const askJagguFn = createServerFn({
   method: "POST",
 })
-  .validator((data: { prompt?: string; subject?: string; imageDataUrls?: string[]; previousMessage?: string }) => data)
+  .inputValidator((data: { prompt?: string; subject?: string; imageDataUrls?: string[]; previousMessage?: string }) => data)
   .handler(async ({ data }) => {
     try {
       const user = await getCurrentUser();
@@ -903,7 +903,7 @@ export const askJagguFn = createServerFn({
 export const getSubtopicsFromCategoryFn = createServerFn({
   method: "POST",
 })
-  .validator((data: { subject: string; categoryName: string }) => data)
+  .inputValidator((data: { subject: string; categoryName: string }) => data)
   .handler(async ({ data }) => {
     try {
       const user = await getCurrentUser();

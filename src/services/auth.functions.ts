@@ -41,7 +41,7 @@ function toAuthResponse(user: {
 }
 
 export const loginStudentServerFn = createServerFn({ method: "POST" })
-  .validator((data: StudentLoginInput) => data)
+  .inputValidator((data: StudentLoginInput) => data)
   .handler(async ({ data }) => {
     const identifier = data.identifier.trim();
     const password = data.password.trim();
@@ -72,7 +72,7 @@ export const loginStudentServerFn = createServerFn({ method: "POST" })
   });
 
 export const loginAdminServerFn = createServerFn({ method: "POST" })
-  .validator((data: AdminLoginInput) => data)
+  .inputValidator((data: AdminLoginInput) => data)
   .handler(async ({ data }) => {
     const userId = data.userId.trim().toUpperCase();
     const password = data.password.trim();

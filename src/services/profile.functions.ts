@@ -4,7 +4,7 @@ import { getStudentProfileByUserId } from "@/server/user";
 import { requireSession } from "@/server/session";
 
 export const getStudentProfileServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string }) => data)
+  .inputValidator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     const db = await connectToDatabase();
     const { payload } = await requireSession(db, "student", data.token);

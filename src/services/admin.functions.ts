@@ -24,7 +24,7 @@ type NoticeInput = {
 };
 
 export const createStudentServerFn = createServerFn({ method: "POST" })
-  .validator((data: CreateStudentInput) => data)
+  .inputValidator((data: CreateStudentInput) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -56,7 +56,7 @@ export const createStudentServerFn = createServerFn({ method: "POST" })
   });
 
 export const getAllStudentsServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string }) => data)
+  .inputValidator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -71,7 +71,7 @@ export const getAllStudentsServerFn = createServerFn({ method: "POST" })
   });
 
 export const createNoticeServerFn = createServerFn({ method: "POST" })
-  .validator((data: NoticeInput) => data)
+  .inputValidator((data: NoticeInput) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -99,7 +99,7 @@ export const createNoticeServerFn = createServerFn({ method: "POST" })
   });
 
 export const getAdminNoticesServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string }) => data)
+  .inputValidator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -126,7 +126,7 @@ export const getAdminNoticesServerFn = createServerFn({ method: "POST" })
   });
 
 export const deleteNoticeServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string; noticeId: string }) => data)
+  .inputValidator((data: { token: string; noticeId: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -147,7 +147,7 @@ export const deleteNoticeServerFn = createServerFn({ method: "POST" })
   });
 
 export const toggleStudentActiveServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string; userId: string; active: boolean }) => data)
+  .inputValidator((data: { token: string; userId: string; active: boolean }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -166,7 +166,7 @@ export const toggleStudentActiveServerFn = createServerFn({ method: "POST" })
   });
 
 export const deleteStudentServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string; userId: string }) => data)
+  .inputValidator((data: { token: string; userId: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -185,7 +185,7 @@ export const deleteStudentServerFn = createServerFn({ method: "POST" })
   });
 
 export const getAdminDashboardServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string }) => data)
+  .inputValidator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -305,7 +305,7 @@ export interface Test {
 }
 
 export const createTestServerFn = createServerFn({ method: "POST" })
-  .validator((data: TestInput) => data)
+  .inputValidator((data: TestInput) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -368,7 +368,7 @@ export const createTestServerFn = createServerFn({ method: "POST" })
   });
 
 export const getTestsServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string }) => data)
+  .inputValidator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -401,7 +401,7 @@ export const getTestsServerFn = createServerFn({ method: "POST" })
   });
 
 export const deleteTestServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string; testId: string }) => data)
+  .inputValidator((data: { token: string; testId: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -436,7 +436,7 @@ export const deleteTestServerFn = createServerFn({ method: "POST" })
   });
 
 export const getPendingSubmissionsServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string }) => data)
+  .inputValidator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -503,7 +503,7 @@ export const getPendingSubmissionsServerFn = createServerFn({ method: "POST" })
   });
 
 export const evaluateSubmissionServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string; submissionId: string; marks: number; feedback: string }) => data)
+  .inputValidator((data: { token: string; submissionId: string; marks: number; feedback: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -570,7 +570,7 @@ export const evaluateSubmissionServerFn = createServerFn({ method: "POST" })
 
 
 export const getAdminRecruitmentRepliesServerFn = createServerFn({ method: "POST" })
-  .validator((data: { token: string }) => data)
+  .inputValidator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();

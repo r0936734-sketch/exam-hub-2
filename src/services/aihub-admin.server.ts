@@ -56,7 +56,7 @@ export async function setupAIHubAccessFn(userId: string, plainPasscode: string) 
 export const createAIHubUserServerFn = createServerFn({
   method: "POST",
 })
-  .validator((data: { studentUserId: string }) => data)
+  .inputValidator((data: { studentUserId: string }) => data)
   .handler(async ({ data }) => {
     try {
       const session = await getCurrentSessionServerFn();
@@ -97,7 +97,7 @@ export const createAIHubUserServerFn = createServerFn({
 export const changeAIHubPasscodeServerFn = createServerFn({
   method: "POST",
 })
-  .validator(
+  .inputValidator(
     (data: {
       oldPasscode: string;
       newPasscode: string;
@@ -202,7 +202,7 @@ export const getAIHubUsersListServerFn = createServerFn({
 export const getAIHubAuditLogsServerFn = createServerFn({
   method: "POST",
 })
-  .validator(
+  .inputValidator(
     (data: {
       userId?: string;
       action?: string;
