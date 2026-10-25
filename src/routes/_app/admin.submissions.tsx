@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, FileImage, Loader2, MessageSquareText } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileImage, Loader2, MessageSquareText, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,12 +33,18 @@ function AdminSubmissions() {
   const [marks, setMarks] = useState("");
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
 
   if (isLoading || !data) return <Skeleton className="h-96" />;
   if (data.length === 0)
     return <div className="text-center py-16 text-muted-foreground">No pending submissions.</div>;
 
-  const current = data[idx];
+  // Ensure idx is always within bounds (fixes issue when data length changes after evaluation)
+  const safeIdx = Math.min(idx, Math.max(0, data.length - 1));
+  const current = data[safeIdx];
+  
+  // Safety check for undefined current (prevents errors during data transitions)
+  if (!current) return <Skeleton className="h-96" />;
 
   const submit = async () => {
     if (!marks) {
@@ -62,8 +68,13 @@ function AdminSubmissions() {
       toast.success("Evaluation submitted");
       setMarks("");
       setFeedback("");
-      if (idx < data.length - 1) setIdx(idx + 1);
-      refetch();
+      
+      // Refetch and adjust index after submission is evaluated
+      await refetch();
+      // Reset to last index if current index is now out of bounds
+      setIdx((prevIdx) => Math.max(0, prevIdx - 1));
+    } catch (error) {
+      toast.error("Failed to submit evaluation");
     } finally {
       setSubmitting(false);
     }
@@ -73,22 +84,22 @@ function AdminSubmissions() {
     <div>
       <PageHeader
         title="Submission evaluation"
-        description={`Reviewing ${idx + 1} of ${data.length} pending submissions`}
+        description={`Reviewing ${safeIdx + 1} of ${data.length} pending submissions`}
         action={
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="icon"
-              disabled={idx === 0}
-              onClick={() => setIdx(idx - 1)}
+              disabled={safeIdx === 0}
+              onClick={() => setIdx(safeIdx - 1)}
             >
               <ChevronLeft className="size-4" />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              disabled={idx === data.length - 1}
-              onClick={() => setIdx(idx + 1)}
+              disabled={safeIdx === data.length - 1}
+              onClick={() => setIdx(safeIdx + 1)}
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -158,20 +169,30 @@ function AdminSubmissions() {
               <div className="grid grid-cols-2 gap-3">
                 {current.imageUrls.map((url: string, i: number) => (
                   <div key={url} className="rounded-lg border bg-muted/50 overflow-hidden">
-                    <a href={url} target="_blank" rel="noreferrer">
-                      <img
-                        src={url}
-                        alt={`Answer ${i + 1}`}
-                        className="aspect-[3/4] w-full object-contain bg-muted"
-                      />
-                    </a>
+                    {brokenImages.has(url) ? (
+                      <div className="aspect-[3/4] w-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
+                        <AlertCircle className="size-6" />
+                        <p className="text-xs mt-2 text-center">Image unavailable</p>
+                      </div>
+                    ) : (
+                      <a href={url} target="_blank" rel="noreferrer">
+                        <img
+                          src={url}
+                          alt={`Answer ${i + 1}`}
+                          className="aspect-[3/4] w-full object-contain bg-muted"
+                          onError={() => {
+                            setBrokenImages((prev) => new Set([...prev, url]));
+                          }}
+                        />
+                      </a>
+                    )}
                   </div>
                 ))}
                 {current.imageUrls.length === 0 && (
                   <div className="col-span-2 aspect-[3/4] rounded-lg border bg-muted/50 grid place-items-center text-muted-foreground">
                     <div className="text-center">
                       <FileImage className="size-8 mx-auto" />
-                      <p className="text-xs mt-2">No images attached</p>
+                      <p className="text-xs mt-2">Images deleted after 2 days</p>
                     </div>
                   </div>
                 )}

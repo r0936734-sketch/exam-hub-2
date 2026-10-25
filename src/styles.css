@@ -130,3 +130,343 @@
     scroll-behavior: smooth;
   }
 }
+
+@keyframes ai-guide-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes ai-guide-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ai-guide-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ai-guide-gate-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes ai-guide-scan {
+  0% {
+    opacity: 0;
+    transform: translateY(-140%);
+  }
+  20%,
+  70% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(140%);
+  }
+}
+
+@keyframes ai-guide-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-success) 28%, transparent);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 0.35rem color-mix(in oklch, var(--color-success) 0%, transparent);
+    transform: scale(1.04);
+  }
+}
+
+.ai-guide-bot {
+  animation: ai-guide-float 4.8s ease-in-out infinite;
+}
+
+.ai-guide-gate-bot {
+  animation: ai-guide-gate-float 3.8s ease-in-out infinite;
+}
+
+.ai-guide-soft-frame {
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) padding-box,
+    linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--color-primary) 18%, transparent),
+        color-mix(in oklch, var(--color-success) 12%, transparent)
+      )
+      border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 8px 18px color-mix(in oklch, var(--color-foreground) 5%, transparent);
+}
+
+.ai-guide-card {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.ai-guide-card:hover {
+  border-color: color-mix(in oklch, var(--color-primary) 24%, var(--color-border));
+  box-shadow: 0 10px 22px color-mix(in oklch, var(--color-primary) 6%, transparent);
+  transform: translateY(-1px);
+}
+
+.ai-guide-card:hover .ai-guide-bot,
+.ai-guide-card:hover .ai-guide-gate-bot {
+  filter: drop-shadow(0 6px 10px color-mix(in oklch, var(--color-primary) 8%, transparent));
+}
+
+.ai-guide-orbit {
+  animation: ai-guide-orbit 18s linear infinite;
+  border: 1px solid color-mix(in oklch, var(--color-primary) 14%, transparent);
+  border-left-color: transparent;
+  border-radius: 9999px;
+  inset: -0.3rem;
+  pointer-events: none;
+  position: absolute;
+}
+
+.ai-guide-scan {
+  animation: ai-guide-scan 3.2s ease-in-out infinite;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklch, var(--color-success) 20%, transparent),
+    transparent
+  );
+  border-radius: 9999px;
+  inset: 0.8rem;
+  pointer-events: none;
+  position: absolute;
+}
+
+.ai-guide-pulse-dot {
+  animation: ai-guide-pulse 2.2s ease-in-out infinite;
+  background: var(--color-success);
+  border-radius: 9999px;
+  height: 0.65rem;
+  width: 0.65rem;
+}
+
+.ai-guide-stat,
+.ai-guide-choice,
+.ai-guide-unlock-button {
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    border-color 180ms ease;
+}
+
+.ai-guide-stat:hover,
+.ai-guide-choice:hover,
+.ai-guide-unlock-button:hover {
+  box-shadow: 0 6px 14px color-mix(in oklch, var(--color-primary) 7%, transparent);
+  transform: translateY(-1px);
+}
+
+.ai-guide-choice:hover {
+  border-color: color-mix(in oklch, var(--color-primary) 50%, var(--color-border));
+}
+
+.ai-guide-typing::after {
+  animation: ai-guide-caret 0.85s steps(1) infinite;
+  content: "|";
+  margin-left: 0.15rem;
+}
+
+.ai-hub-shell {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--color-primary) 7%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      225deg,
+      color-mix(in oklch, var(--color-success) 8%, transparent),
+      transparent 38%
+    ),
+    var(--color-background);
+  position: relative;
+}
+
+.ai-hub-shell::before {
+  background-image:
+    linear-gradient(
+      color-mix(in oklch, var(--color-foreground) 5%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--color-foreground) 5%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 44px 44px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+  opacity: 0.32;
+  pointer-events: none;
+  position: absolute;
+}
+
+.ai-hub-container {
+  isolation: isolate;
+  position: relative;
+}
+
+.ai-hub-panel,
+.ai-hub-hero,
+.ai-hub-stat-card {
+  background:
+    linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--color-card) 94%, white),
+        color-mix(in oklch, var(--color-card) 98%, transparent)
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--color-primary) 25%, transparent),
+        color-mix(in oklch, var(--color-success) 20%, transparent),
+        color-mix(in oklch, var(--color-border) 75%, transparent)
+      )
+      border-box;
+  border: 1px solid transparent;
+  box-shadow:
+    0 18px 45px color-mix(in oklch, var(--color-foreground) 8%, transparent),
+    inset 0 1px 0 color-mix(in oklch, white 60%, transparent);
+}
+
+.dark .ai-hub-panel,
+.dark .ai-hub-hero,
+.dark .ai-hub-stat-card {
+  background:
+    linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--color-card) 92%, white 4%),
+        color-mix(in oklch, var(--color-card) 98%, black)
+      )
+      padding-box,
+    linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--color-primary) 30%, transparent),
+        color-mix(in oklch, var(--color-success) 22%, transparent),
+        color-mix(in oklch, var(--color-border) 70%, transparent)
+      )
+      border-box;
+}
+
+.ai-hub-hero {
+  overflow: hidden;
+  position: relative;
+}
+
+.ai-hub-hero::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--color-primary) 12%, transparent),
+    transparent
+  );
+  content: "";
+  height: 1px;
+  inset: auto 0 0;
+  position: absolute;
+}
+
+.ai-hub-kicker {
+  align-items: center;
+  color: color-mix(in oklch, var(--color-primary) 76%, var(--color-success));
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  gap: 0.45rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ai-hub-pill {
+  align-items: center;
+  background: color-mix(in oklch, var(--color-primary) 9%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-primary) 18%, var(--color-border));
+  border-radius: 9999px;
+  color: color-mix(in oklch, var(--color-primary) 72%, var(--color-foreground));
+  display: inline-flex;
+  gap: 0.45rem;
+  padding: 0.4rem 0.7rem;
+}
+
+.ai-hub-primary-button {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--color-primary) 88%, black),
+    color-mix(in oklch, var(--color-success) 74%, var(--color-primary))
+  );
+  box-shadow: 0 10px 22px color-mix(in oklch, var(--color-primary) 18%, transparent);
+  color: white;
+}
+
+.ai-hub-primary-button:hover {
+  filter: brightness(1.04);
+}
+
+.ai-hub-upload-zone {
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) padding-box,
+    repeating-linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--color-success) 36%, transparent) 0 10px,
+        color-mix(in oklch, var(--color-primary) 28%, transparent) 10px 20px
+      )
+      border-box;
+  border: 1px dashed transparent;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.ai-hub-upload-zone:hover {
+  box-shadow: 0 12px 26px color-mix(in oklch, var(--color-success) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-guide-bot,
+  .ai-guide-gate-bot,
+  .ai-guide-orbit,
+  .ai-guide-pulse-dot,
+  .ai-guide-scan,
+  .ai-guide-typing::after {
+    animation: none;
+  }
+
+  .ai-guide-card:hover,
+  .ai-guide-stat:hover,
+  .ai-guide-choice:hover,
+  .ai-guide-unlock-button:hover,
+  .ai-hub-upload-zone:hover {
+    transform: none;
+  }
+}

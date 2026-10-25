@@ -3,15 +3,21 @@ import type { Db } from "mongodb";
 import { verifyToken, type TokenPayload } from "@/server/jwt";
 
 const AUTH_COOKIE = "lt_grade_session";
-const ONE_DAY = 60 * 60 * 24;
+const SEVEN_DAYS = 60 * 60 * 24 * 7; // Extended to 7 days for better persistence
 
-const cookieOptions = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-  maxAge: ONE_DAY,
-};
+// Cookie options that work on both localhost (HTTP) and production (HTTPS)
+function getCookieOptions() {
+  const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+
+  return {
+    httpOnly: false, // Allow JS access as fallback for browsers that block cookies
+    sameSite: isProduction ? ("none" as const) : ("lax" as const), // "none" for production, "lax" for localhost
+    secure: isProduction, // Only enforce secure flag in production (HTTPS)
+    path: "/",
+    maxAge: SEVEN_DAYS,
+    domain: undefined, // Let browser handle domain automatically
+  };
+}
 
 export type SessionUser = {
   id: string;
@@ -27,7 +33,7 @@ export type SessionResult = {
 };
 
 export function setAuthCookie(token: string) {
-  setCookie(AUTH_COOKIE, token, cookieOptions);
+  setCookie(AUTH_COOKIE, token, getCookieOptions());
 }
 
 export function clearAuthCookie() {
@@ -71,7 +77,7 @@ export async function requireSession(
   role: "student" | "admin",
   fallbackToken?: string,
 ) {
-  const session = await getSessionFromToken(db, readAuthToken(fallbackToken),);
+  const session = await getSessionFromToken(db, readAuthToken(fallbackToken));
 
   if (!session || session.role !== role) {
     throw new Error(role === "admin" ? "Forbidden - Admin only" : "Forbidden - Student only");

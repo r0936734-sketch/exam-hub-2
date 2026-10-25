@@ -2,11 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { connectToDatabase } from "@/server/db";
 import { getStudentProfileByUserId } from "@/server/user";
 import { cleanupExpiredTestsAndImages } from "@/server/cleanup";
+import { getAllActiveAdmins } from "@/server/admin";
 import { ObjectId } from "mongodb";
 import { requireSession } from "@/server/session";
 
+function getUniqueSubmissionImages(submission: any) {
+  return Array.from(
+    new Set([
+      ...(submission.imageUrls || []),
+      ...(submission.answers || []).flatMap((answer: any) => answer.imageUrls || []),
+    ].filter(Boolean)),
+  );
+}
+
 export const getStudentNoticesServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -35,7 +45,7 @@ export const getStudentNoticesServerFn = createServerFn({ method: "POST" })
  * Get all published tests for students
  */
 export const getPublishedTestsServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -92,7 +102,7 @@ export const getPublishedTestsServerFn = createServerFn({ method: "POST" })
   });
 
 export const getStudentDashboardServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -141,11 +151,15 @@ export const getStudentDashboardServerFn = createServerFn({ method: "POST" })
         },
         recentScores: recentSubmissions.map((submission) => {
           const test = submission.test?.[0];
+          const totalMarks = (test?.questions || []).reduce(
+            (sum: number, question: any) => sum + Number(question.marks || 0),
+            0,
+          );
           return {
             id: submission._id.toString(),
             title: test?.title || "Untitled test",
             score: Number(submission.marks || 0),
-            total: 100,
+            total: totalMarks || 100, // Fallback to 100 if no questions found
             date:
               submission.evaluatedAt?.toISOString?.() ||
               submission.submittedAt?.toISOString?.() ||
@@ -162,7 +176,7 @@ export const getStudentDashboardServerFn = createServerFn({ method: "POST" })
  * Get test details with all questions
  */
 export const getTestDetailServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; testId: string }) => data)
+  .validator((data: { token: string; testId: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -228,7 +242,7 @@ export interface SubmitAnswersInput {
  * Submit test answers with image support
  */
 export const submitTestAnswersServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: SubmitAnswersInput) => data)
+  .validator((data: SubmitAnswersInput) => data)
   .handler(async ({ data }) => {
     try {
       if (!data.testId || !Array.isArray(data.answers)) {
@@ -306,7 +320,7 @@ export const submitTestAnswersServerFn = createServerFn({ method: "POST" })
   });
 
 export const getMySubmissionsServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       const db = await connectToDatabase();
@@ -376,4 +390,185 @@ export const getMySubmissionsServerFn = createServerFn({ method: "POST" })
       throw new Error((error as Error).message || "Failed to fetch your submissions");
     }
   });
+
+export const getAdminsListServerFn = createServerFn({ method: "POST" })
+  .validator((data: { token: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const db = await connectToDatabase();
+      await requireSession(db, "student", data.token);
+      const admins = await getAllActiveAdmins(db);
+
+      return {
+        admins: admins.map((admin) => ({
+          id: admin.userId,
+          name: admin.name,
+        })),
+      };
+    } catch (error) {
+      throw new Error((error as Error).message || "Failed to fetch admins list");
+    }
+  });
+
+/**
+ * Get all recent submissions grouped by test (visible to everyone)
+ */
+export const getRecentSubmissionsByTestServerFn = createServerFn({ method: "POST" })
+  .validator((data: { token: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const db = await connectToDatabase();
+      await requireSession(db, "student", data.token);
+      await cleanupExpiredTestsAndImages(db);
+
+      const submissions = await db
+        .collection("submissions")
+        .aggregate([
+          {
+            $lookup: {
+              from: "tests",
+              localField: "testId",
+              foreignField: "_id",
+              as: "test",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "studentId",
+              foreignField: "userId",
+              as: "student",
+            },
+          },
+          { $match: { "test.status": "published" } }, // Only show submissions for published tests
+          { $sort: { submittedAt: -1 } },
+          { $limit: 100 }, // Get recent 100 submissions
+        ])
+        .toArray();
+
+      // Group by test
+      const grouped: {
+        [key: string]: {
+          testId: string;
+          testTitle: string;
+          submissions: Array<{
+            id: string;
+            studentName: string;
+            studentId: string;
+            images: string[];
+            status: string;
+            marks: number | null;
+            submittedAt: string;
+          }>;
+        };
+      } = {};
+
+      submissions.forEach((submission) => {
+        const testId = submission.testId.toString();
+        const testTitle = submission.test?.[0]?.title || "Untitled test";
+        if (!grouped[testId]) {
+          grouped[testId] = { testId, testTitle, submissions: [] };
+        }
+
+        const images = getUniqueSubmissionImages(submission);
+
+        grouped[testId].submissions.push({
+          id: submission._id.toString(),
+          studentName: submission.student?.[0]?.name || submission.studentId,
+          studentId: submission.studentId,
+          images,
+          status: submission.status || "pending",
+          marks: typeof submission.marks === "number" ? submission.marks : null,
+          submittedAt: submission.submittedAt?.toISOString?.() || new Date().toISOString(),
+        });
+      });
+
+      return {
+        tests: Object.values(grouped),
+      };
+    } catch (error) {
+      throw new Error((error as Error).message || "Failed to fetch submissions by test");
+    }
+  });
+
+/**
+ * Get admin view of all submissions grouped by test
+ */
+export const getAdminSubmissionsViewServerFn = createServerFn({ method: "POST" })
+  .validator((data: { token: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const db = await connectToDatabase();
+      await requireSession(db, "admin", data.token);
+      await cleanupExpiredTestsAndImages(db);
+
+      const submissions = await db
+        .collection("submissions")
+        .aggregate([
+          {
+            $lookup: {
+              from: "tests",
+              localField: "testId",
+              foreignField: "_id",
+              as: "test",
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "studentId",
+              foreignField: "userId",
+              as: "student",
+            },
+          },
+          { $sort: { submittedAt: -1 } },
+          { $limit: 100 },
+        ])
+        .toArray();
+
+      // Group by test
+      const grouped: {
+        [key: string]: {
+          testId: string;
+          testTitle: string;
+          submissions: Array<{
+            id: string;
+            studentName: string;
+            studentId: string;
+            images: string[];
+            status: string;
+            marks: number | null;
+            submittedAt: string;
+          }>;
+        };
+      } = {};
+
+      submissions.forEach((submission) => {
+        const testId = submission.testId.toString();
+        const testTitle = submission.test?.[0]?.title || "Untitled test";
+        if (!grouped[testId]) {
+          grouped[testId] = { testId, testTitle, submissions: [] };
+        }
+
+        const images = getUniqueSubmissionImages(submission);
+
+        grouped[testId].submissions.push({
+          id: submission._id.toString(),
+          studentName: submission.student?.[0]?.name || submission.studentId,
+          studentId: submission.studentId,
+          images,
+          status: submission.status || "pending",
+          marks: typeof submission.marks === "number" ? submission.marks : null,
+          submittedAt: submission.submittedAt?.toISOString?.() || new Date().toISOString(),
+        });
+      });
+
+      return {
+        tests: Object.values(grouped),
+      };
+    } catch (error) {
+      throw new Error((error as Error).message || "Failed to fetch admin submissions view");
+    }
+  });
+
 

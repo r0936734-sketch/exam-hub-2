@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -91,6 +92,7 @@ function AdminNotices() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create notice</DialogTitle>
+                <DialogDescription>Post a new notice for all students to see</DialogDescription>
               </DialogHeader>
               <Textarea
                 value={text}

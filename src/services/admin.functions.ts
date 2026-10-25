@@ -24,7 +24,7 @@ type NoticeInput = {
 };
 
 export const createStudentServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateStudentInput) => data)
+  .validator((data: CreateStudentInput) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -56,7 +56,7 @@ export const createStudentServerFn = createServerFn({ method: "POST" })
   });
 
 export const getAllStudentsServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -71,7 +71,7 @@ export const getAllStudentsServerFn = createServerFn({ method: "POST" })
   });
 
 export const createNoticeServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: NoticeInput) => data)
+  .validator((data: NoticeInput) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -99,7 +99,7 @@ export const createNoticeServerFn = createServerFn({ method: "POST" })
   });
 
 export const getAdminNoticesServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -126,7 +126,7 @@ export const getAdminNoticesServerFn = createServerFn({ method: "POST" })
   });
 
 export const deleteNoticeServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; noticeId: string }) => data)
+  .validator((data: { token: string; noticeId: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -147,7 +147,7 @@ export const deleteNoticeServerFn = createServerFn({ method: "POST" })
   });
 
 export const toggleStudentActiveServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; userId: string; active: boolean }) => data)
+  .validator((data: { token: string; userId: string; active: boolean }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -166,7 +166,7 @@ export const toggleStudentActiveServerFn = createServerFn({ method: "POST" })
   });
 
 export const deleteStudentServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; userId: string }) => data)
+  .validator((data: { token: string; userId: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -185,7 +185,7 @@ export const deleteStudentServerFn = createServerFn({ method: "POST" })
   });
 
 export const getAdminDashboardServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -305,7 +305,7 @@ export interface Test {
 }
 
 export const createTestServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: TestInput) => data)
+  .validator((data: TestInput) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -349,8 +349,6 @@ export const createTestServerFn = createServerFn({ method: "POST" })
         updatedAt: now,
       };
 
-      console.log("Creating test:", test.title, "with", test.questions.length, "questions");
-
       const result = await db.collection("tests").insertOne(test as any);
 
       if (!result.insertedId) {
@@ -370,7 +368,7 @@ export const createTestServerFn = createServerFn({ method: "POST" })
   });
 
 export const getTestsServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -403,7 +401,7 @@ export const getTestsServerFn = createServerFn({ method: "POST" })
   });
 
 export const deleteTestServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; testId: string }) => data)
+  .validator((data: { token: string; testId: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -438,7 +436,7 @@ export const deleteTestServerFn = createServerFn({ method: "POST" })
   });
 
 export const getPendingSubmissionsServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string }) => data)
+  .validator((data: { token: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -505,7 +503,7 @@ export const getPendingSubmissionsServerFn = createServerFn({ method: "POST" })
   });
 
 export const evaluateSubmissionServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; submissionId: string; marks: number; feedback: string }) => data)
+  .validator((data: { token: string; submissionId: string; marks: number; feedback: string }) => data)
   .handler(async ({ data }) => {
     try {
       await initializeDefaultAdmin();
@@ -564,5 +562,39 @@ export const evaluateSubmissionServerFn = createServerFn({ method: "POST" })
       return { ok: true };
     } catch (error) {
       throw new Error((error as Error).message || "Failed to evaluate submission");
+    }
+  });
+
+// Admin Recruitment Functions
+
+
+
+export const getAdminRecruitmentRepliesServerFn = createServerFn({ method: "POST" })
+  .validator((data: { token: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      await initializeDefaultAdmin();
+      const db = await connectToDatabase();
+      await requireSession(db, "admin", data.token);
+
+      const replies = await db
+        .collection("noticereply")
+        .find({ interested: true })
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      return {
+        replies: replies.map((reply) => ({
+          id: reply._id.toString(),
+          studentId: reply.studentId,
+          studentName: reply.studentName,
+          suggestedPassword: reply.suggestedPassword,
+          enthusiasmMsg: reply.enthusiasmMsg,
+          status: reply.status || "pending",
+          createdAt: reply.createdAt?.toISOString?.() || new Date().toISOString(),
+        })),
+      };
+    } catch (error) {
+      throw new Error((error as Error).message || "Failed to fetch admin recruitment replies");
     }
   });

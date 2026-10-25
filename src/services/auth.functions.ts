@@ -30,7 +30,7 @@ function toAuthResponse(user: {
   setAuthCookie(token);
 
   return {
-    token: "session",
+    token: token,
     user: {
       id: user.userId,
       username: user.name.toLowerCase().replace(/\s+/g, "_"),
@@ -41,7 +41,7 @@ function toAuthResponse(user: {
 }
 
 export const loginStudentServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: StudentLoginInput) => data)
+  .validator((data: StudentLoginInput) => data)
   .handler(async ({ data }) => {
     const identifier = data.identifier.trim();
     const password = data.password.trim();
@@ -55,7 +55,12 @@ export const loginStudentServerFn = createServerFn({ method: "POST" })
     const db = await connectToDatabase();
     const user = await findStudentByUserIdOrName(db, identifier);
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      throw new Error("Invalid name/user ID or password");
+    }
+
+    // Compare plaintext password
+    if (password !== user.password) {
       throw new Error("Invalid name/user ID or password");
     }
 
@@ -67,7 +72,7 @@ export const loginStudentServerFn = createServerFn({ method: "POST" })
   });
 
 export const loginAdminServerFn = createServerFn({ method: "POST" })
-  .inputValidator((data: AdminLoginInput) => data)
+  .validator((data: AdminLoginInput) => data)
   .handler(async ({ data }) => {
     const userId = data.userId.trim().toUpperCase();
     const password = data.password.trim();
@@ -105,10 +110,14 @@ export const getCurrentSessionServerFn = createServerFn({ method: "POST" }).hand
     return { user: null, role: null, token: null };
   }
 
+  // Refresh the session cookie to extend expiration
+  const token = generateToken(session.user.id, session.user.name, session.role);
+  setAuthCookie(token);
+
   return {
     user: session.user,
     role: session.role,
-    token: "session",
+    token: token, // Return the actual token for localStorage backup
   };
 });
 

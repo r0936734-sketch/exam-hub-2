@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   FileText,
   Trophy,
-  User,
   LogOut,
   Moon,
   Sun,
@@ -15,6 +14,8 @@ import {
   X,
   GraduationCap,
   ClipboardList,
+  Upload,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +24,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
-import { getStudentNoticesServerFn } from "@/services/student.functions";
+import { AIHubAccessPopup } from "@/components/AIHubAccessPopup";
+import { getAdminsListServerFn, getStudentNoticesServerFn } from "@/services/student.functions";
 import { useExamMode } from "@/hooks/useExamMode";
 import { EXAM_MODE_LIST } from "@/lib/exam-modes";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -34,10 +36,11 @@ const studentNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tests", label: "Tests", icon: FileText },
   { to: "/practice", label: "MCQ Practice", icon: ClipboardList },
+  { to: "/submissions", label: "Submissions", icon: Upload },
+  { to: "/aihub", label: "AI Hub", icon: Sparkles },
   { to: "/syllabus", label: "Syllabus", icon: BookOpen },
   { to: "/notices", label: "Notices", icon: Megaphone },
   { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
-  { to: "/profile", label: "Profile", icon: User },
 ];
 
 const adminNav: NavItem[] = [
@@ -72,6 +75,14 @@ export function AppLayout() {
     enabled: Boolean(token && role === "student"),
   });
 
+  const { data: adminsData } = useQuery({
+    queryKey: ["layout-admins", token],
+    queryFn: async () => getAdminsListServerFn({ data: { token: token || "" } }),
+    enabled: Boolean(token && role === "student"),
+  });
+
+
+
   const latestNotice = useMemo(() => noticeData?.notices?.[0] || null, [noticeData]);
 
   useEffect(() => {
@@ -102,6 +113,21 @@ export function AppLayout() {
     signOut();
     navigate({ to: "/login" });
   };
+
+  // Prevent background scroll when drawer is open
+  useEffect(() => {
+    if (open) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <div className="min-h-screen flex w-full bg-background text-foreground">
@@ -136,7 +162,21 @@ export function AppLayout() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-sidebar-border space-y-2">
+        <div className="flex-1 overflow-y-auto p-3 border-t border-sidebar-border space-y-3">
+          {/* Admins section for students */}
+          {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide">Admins</p>
+              <div className="space-y-1">
+                {adminsData.admins.map((admin) => (
+                  <div key={admin.id} className="rounded-md bg-sidebar-accent/40 px-3 py-2">
+                    <p className="text-xs font-medium text-sidebar-foreground">{admin.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* User info section */}
           {user && (
             <div className="mb-2 flex items-center gap-3 rounded-lg border bg-card/60 px-3 py-2.5">
               <div className="size-9 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold shrink-0">
@@ -175,10 +215,10 @@ export function AppLayout() {
           onClick={() => setOpen(false)}
         >
           <aside
-            className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r border-sidebar-border p-4"
+            className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between p-4 flex-shrink-0 border-b border-sidebar-border">
               <div className="flex items-center gap-2">
                 <div className="size-8 rounded-lg bg-primary text-primary-foreground grid place-items-center">
                   <GraduationCap className="size-4" />
@@ -189,19 +229,35 @@ export function AppLayout() {
                 <X className="size-4" />
               </Button>
             </div>
-            <nav className="space-y-1">
-              {nav.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm hover:bg-sidebar-accent"
-                >
-                  <item.icon className="size-4" /> {item.label}
-                </Link>
-              ))}
-            </nav>
-            <div className="mt-6 pt-4 border-t border-sidebar-border space-y-1">
+            <div className="flex-1 overflow-y-auto">
+              <nav className="space-y-1 px-4 pt-4">
+                {nav.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm hover:bg-sidebar-accent"
+                  >
+                    <item.icon className="size-4" /> {item.label}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Admins section for students in mobile */}
+              {role === "student" && adminsData?.admins && adminsData.admins.length > 0 && (
+                <div className="px-4 pt-6 pb-4 border-t border-sidebar-border space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground px-1 uppercase tracking-wide">Admins</p>
+                  <div className="space-y-1">
+                    {adminsData.admins.map((admin) => (
+                      <div key={admin.id} className="rounded-md bg-sidebar-accent/40 px-3 py-2">
+                        <p className="text-xs font-medium text-sidebar-foreground">{admin.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-sidebar-border space-y-1 p-4 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -281,9 +337,9 @@ export function AppLayout() {
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card border-t border-border">
           <div
             className="grid"
-            style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${nav.filter((item) => !["Notices", "Leaderboard"].includes(item.label)).length}, minmax(0, 1fr))` }}
           >
-            {nav.map((item) => {
+            {nav.filter((item) => !["Notices", "Leaderboard"].includes(item.label)).map((item) => {
               const active = pathname.startsWith(item.to);
               return (
                 <Link
@@ -328,6 +384,9 @@ export function AppLayout() {
           <p className="text-center text-xs text-muted-foreground">You can change this by reopening the app or from the syllabus page.</p>
         </DialogContent>
       </Dialog>
+      {role === "student" && user && (
+        <AIHubAccessPopup userId={user.id} userName={user.name} token={token || ""} />
+      )}
     </div>
   );
 }

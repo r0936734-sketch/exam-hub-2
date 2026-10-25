@@ -6,6 +6,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ExamModeProvider } from "@/hooks/useExamMode";
@@ -96,6 +97,56 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    // Ensure cookies are sent with all SAME-ORIGIN fetch requests (critical for production)
+    // But do NOT add credentials to cross-origin requests (like Cloudinary)
+    if (typeof window !== "undefined") {
+      const originalFetch = window.fetch;
+      if (!(window.fetch as any).__wrapped) {
+        window.fetch = function (...args: any[]) {
+          const [resource, config = {}] = args;
+
+          // Only add credentials for same-origin requests
+          if (typeof resource === "string") {
+            const isAbsolute = resource.startsWith("http://") || resource.startsWith("https://");
+            const isRelative = resource.startsWith("/");
+            
+            if (isRelative) {
+              // Relative URL - definitely same-origin
+              config.credentials = "include";
+            } else if (isAbsolute) {
+              // Absolute URL - check if it's same-origin
+              try {
+                const url = new URL(resource);
+                const currentOrigin = new URL(window.location.href).origin;
+                if (url.origin === currentOrigin) {
+                  config.credentials = "include";
+                }
+                // If cross-origin, don't add credentials (leave as default "omit")
+              } catch {
+                // If URL parsing fails, don't add credentials
+              }
+            }
+          }
+
+          return originalFetch.apply(window, [resource, config]);
+        } as any;
+        (window.fetch as any).__wrapped = true;
+      }
+    }
+  }, []);
+
+  // Keep-alive ping to prevent Render free-tier dyno from sleeping
+  // while the user is actively on the page.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch("/api/ping").catch(() => {});
+    }, 4 * 60 * 1000); // every 4 minutes
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

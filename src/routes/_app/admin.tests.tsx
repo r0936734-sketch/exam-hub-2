@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -98,7 +99,7 @@ function AdminTests() {
         setDeadline(parsed.deadline);
         setQuestions(parsed.questions);
       } catch (e) {
-        console.error("Failed to load draft:", e);
+        // Silent failure - draft not loaded
       }
     }
   }, []);
@@ -144,7 +145,6 @@ function AdminTests() {
       });
       toast.success("Image uploaded successfully");
     } catch (error) {
-      console.error("Image upload error:", error);
       toast.error((error as Error).message || "Failed to upload image");
     } finally {
       setUploadingQuestionId(null);
@@ -234,7 +234,6 @@ function AdminTests() {
       setOpen(false);
       refetch();
     } catch (error) {
-      console.error("Save test error:", error);
       toast.error((error as Error).message || "Failed to save test");
     } finally {
       setIsSaving(false);
@@ -274,6 +273,7 @@ function AdminTests() {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
               <DialogHeader>
                 <DialogTitle>Create new test</DialogTitle>
+                <DialogDescription>Upload questions with images and set test parameters</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -342,6 +342,7 @@ function AdminTests() {
                       <DialogContent className="max-w-sm">
                         <DialogHeader>
                           <DialogTitle>Choose question type</DialogTitle>
+                          <DialogDescription>Select text or image-based questions</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-3">
                           <Button
