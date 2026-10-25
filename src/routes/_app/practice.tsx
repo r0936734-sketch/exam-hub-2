@@ -1,24 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CheckCircle2, CircleAlert, RotateCcw, Sparkles } from "lucide-react";
+import { CheckCircle2, CircleAlert, LoaderCircle, RotateCcw, Sparkles } from "lucide-react";
+import { LoadingAnimation } from "@/components/LoadingAnimation";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 import { useExamMode } from "@/hooks/useExamMode";
-import { buildMcqSet, getCorrectOptionDistribution, type McqQuestion } from "@/lib/mcq-engine";
+import { getCorrectOptionDistribution, type McqQuestion } from "@/lib/mcq-engine";
+import { QUESTION_GENERATION_MESSAGES } from "@/lib/loading-messages";
+import { generateMcqsServerFn } from "@/services/mcq.functions";
 
 export const Route = createFileRoute("/_app/practice")({ component: PracticePage });
 
 function PracticePage() {
   const { mode } = useExamMode();
+  const { token } = useAuth();
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [count, setCount] = useState(20);
   const [questions, setQuestions] = useState<McqQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [showResults, setShowResults] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState("");
 
   const selected = useMemo(
     () => mode.syllabus.filter((topic) => selectedTopics.includes(topic.id)),
@@ -33,11 +40,41 @@ function PracticePage() {
       : [...current, topicId]);
   };
 
-  const startPractice = () => {
-    const next = buildMcqSet(selected, count);
-    setQuestions(next);
-    setAnswers({});
-    setShowResults(false);
+  const startPractice = async () => {
+    if (!token) {
+      setGenerationError("Your session has expired. Please sign in again to generate MCQs.");
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationError("");
+
+    try {
+      const result = await generateMcqsServerFn({
+        data: {
+          token,
+          examTitle: mode.title,
+          topics: selected.map(({ id, title, subtopics }) => ({ id, title, subtopics })),
+          questionCount: count,
+        },
+      });
+      const next = result.questions.map(({ topic: topicTitle, ...question }, index) => {
+        const topic = selected.find(({ title }) => title === topicTitle) ?? selected[0];
+        return {
+          ...question,
+          id: `${topic.id}-${index}-${Date.now()}`,
+          topicId: topic.id,
+          topicTitle: topic.title,
+        };
+      });
+      setQuestions(next);
+      setAnswers({});
+      setShowResults(false);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Failed to generate MCQs. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (mode.format === "descriptive") {
@@ -157,7 +194,10 @@ function PracticePage() {
               <label className="grid gap-2 text-sm font-medium">Question count
                 <Input type="number" min={5} max={50} step={5} value={count} onChange={(event) => setCount(Math.max(5, Math.min(50, Number(event.target.value) || 5)))} />
               </label>
-              <Button className="w-full gap-2" disabled={!selected.length} onClick={startPractice}><Sparkles className="size-4" /> Create MCQs</Button>
+              <Button className="w-full gap-2" disabled={!selected.length || isGenerating} onClick={startPractice}>
+                {isGenerating ? <LoaderCircle className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                {isGenerating ? "Generating MCQs..." : "Generate MCQs with AI"}
+              </Button>
               {!selected.length && <p className="flex gap-2 text-xs text-amber-700 dark:text-amber-300"><CircleAlert className="size-4 shrink-0" /> Select at least one topic to continue.</p>}
             </CardContent>
           </Card>
@@ -166,6 +206,17 @@ function PracticePage() {
           </Card>
         </div>
       </div>
+      <LoadingAnimation
+        isVisible={isGenerating}
+        messages={QUESTION_GENERATION_MESSAGES}
+        message="Generating your MCQ practice set..."
+      />
+      {generationError && (
+        <p role="alert" className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" />
+          {generationError}
+        </p>
+      )}
     </div>
   );
 }
