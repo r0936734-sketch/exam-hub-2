@@ -6,6 +6,8 @@ export type McqQuestion = {
   options: string[];
   correctIndex: number;
   explanation: string;
+  subtopic?: string;
+  style?: string;
 };
 
 export function getCorrectOptionDistribution(questions: McqQuestion[]) {
