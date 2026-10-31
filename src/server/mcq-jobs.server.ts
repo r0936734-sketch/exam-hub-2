@@ -87,7 +87,7 @@ async function runJob(job: Job, examModeId: ExamModeId, plan: SlotPlan[], instru
       instructions,
       signal: job.abort.signal,
       onQuestion: (question) => {
-        const meta = plan[question.slot];
+        const meta = plan[question.sourceSlot] ?? plan[question.slot];
         job.questions.push({
           slot: question.slot,
           topicId: meta.topicId,

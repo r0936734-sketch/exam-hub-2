@@ -5,19 +5,20 @@ import { EXAM_PROFILES, STYLE_RULES, type SlotPlan } from "@/lib/mcq-profiles";
 /**
  * Streaming MCQ generator.
  *
- * - Work is split into small batches (a few questions each) that run with limited concurrency.
+ * - Each configured model gets a 10-question batch at the same time.
+ * - The model that returns a valid question first claims the first available 10-question
+ *   display block, so a slow model can never hold up questions 1–10.
  * - The model streams a JSON array; every COMPLETE question object is validated on the spot and
  *   handed to `onQuestion` immediately, so the UI can build the page live.
  * - A bad question never fails the batch: only the missing slots are retried (alternating models).
  */
 
 const MCQ_MODELS = ["gemma-4-31b-it", "gemma-4-26b-a4b-it"] as const;
-const BATCH_SIZE = 8;
-const CONCURRENCY = 2;
-const MAX_ATTEMPTS = 2;
-const START_TIMEOUT_MS = 60_000;
-const FIRST_CHUNK_TIMEOUT_MS = 90_000;
-const CHUNK_TIMEOUT_MS = 45_000;
+const BATCH_SIZE = 10;
+const MAX_ATTEMPTS = 3;
+const START_TIMEOUT_MS = 12_000;
+const FIRST_CHUNK_TIMEOUT_MS = 30_000;
+const CHUNK_TIMEOUT_MS = 20_000;
 
 export class FatalMcqError extends Error {}
 
@@ -33,6 +34,8 @@ function getAi() {
 
 export type AcceptedMcq = {
   slot: number;
+  /** Original planned slot. The display slot can change when another provider wins the race. */
+  sourceSlot: number;
   prompt: string;
   options: string[];
   correctIndex: number;
@@ -295,7 +298,14 @@ function validateQuestion(raw: Record<string, unknown>, plan: SlotPlan, ctx: Run
 
   return {
     ok: true,
-    question: { slot: plan.slot, prompt, options: finalOptions, correctIndex: finalIndex, explanation },
+    question: {
+      slot: plan.slot,
+      sourceSlot: plan.slot,
+      prompt,
+      options: finalOptions,
+      correctIndex: finalIndex,
+      explanation,
+    },
   };
 }
 
@@ -350,7 +360,12 @@ OUTPUT FORMAT — return ONLY a JSON array, starting immediately with "[" (no pr
 
 /* ------------------------------- generation ------------------------------ */
 
-async function streamAttempt(ctx: RunContext, model: string, pending: SlotPlan[]) {
+async function streamAttempt(
+  ctx: RunContext,
+  model: string,
+  pending: SlotPlan[],
+  onAccepted: (question: AcceptedMcq) => void,
+) {
   const prompt = buildPrompt(ctx, pending);
   const bySlotNumber = new Map(pending.map((p) => [p.slot + 1, p]));
   const attemptAbort = new AbortController();
@@ -377,7 +392,7 @@ async function streamAttempt(ctx: RunContext, model: string, pending: SlotPlan[]
     }
     ctx.filled.add(plan.slot);
     ctx.seenStems.push(result.question.prompt);
-    ctx.onQuestion(result.question);
+    onAccepted(result.question);
   };
 
   try {
@@ -417,20 +432,36 @@ async function streamAttempt(ctx: RunContext, model: string, pending: SlotPlan[]
   if (rejected > 0) console.info(`[MCQ] ${model}: ${rejected} question(s) failed quality checks in this attempt`);
 }
 
-async function runGroup(ctx: RunContext, group: SlotPlan[]) {
+async function runGroup(
+  ctx: RunContext,
+  group: SlotPlan[],
+  preferredModelIndex: number,
+  reserveDisplayBlock: (size: number) => number,
+) {
   const label =
     group.length === 1 ? `question ${group[0].slot + 1}` : `questions ${group[0].slot + 1}–${group[group.length - 1].slot + 1}`;
+
+  let displayStart: number | undefined;
+  const emitQuestion = (question: AcceptedMcq) => {
+    // Reserve a contiguous block only after a provider has produced a valid question.
+    // The first responsive provider therefore owns questions 1–10.
+    if (displayStart === undefined) displayStart = reserveDisplayBlock(group.length);
+    const position = group.findIndex((plan) => plan.slot === question.sourceSlot);
+    if (position < 0) return;
+    ctx.onQuestion({ ...question, slot: displayStart + position });
+  };
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     if (ctx.signal.aborted || ctx.fatal) return;
     const pending = group.filter((p) => !ctx.filled.has(p.slot));
     if (!pending.length) return;
 
-    const model = MCQ_MODELS[attempt % MCQ_MODELS.length];
+    // Each initial lane starts on a different model; retries immediately rotate providers.
+    const model = MCQ_MODELS[(preferredModelIndex + attempt) % MCQ_MODELS.length];
     ctx.onStatus(attempt === 0 ? `Writing ${label}…` : `Retrying ${pending.length} question${pending.length === 1 ? "" : "s"} (${label})…`);
 
     try {
-      await streamAttempt(ctx, model, pending);
+      await streamAttempt(ctx, model, pending, emitQuestion);
     } catch (error) {
       if (ctx.signal.aborted) return;
       ctx.lastError = error;
@@ -447,7 +478,7 @@ async function runGroup(ctx: RunContext, group: SlotPlan[]) {
             ? "The AI is busy right now — switching model and retrying…"
             : "Hit a snag — retrying with the backup model…",
         );
-        await sleep(isRateLimited(error) ? 2500 * (attempt + 1) : 800);
+        await sleep(isRateLimited(error) ? 500 * (attempt + 1) : 250);
       }
     }
   }
@@ -480,11 +511,19 @@ export async function generateMcqSet(args: {
   for (let i = 0; i < args.plan.length; i += BATCH_SIZE) groups.push(args.plan.slice(i, i + BATCH_SIZE));
 
   const queue = [...groups];
-  const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async (_, workerIndex) => {
-    if (workerIndex > 0) await sleep(700 * workerIndex);
+  let nextDisplaySlot = 0;
+  const reserveDisplayBlock = (size: number) => {
+    const start = nextDisplaySlot;
+    nextDisplaySlot += size;
+    return start;
+  };
+
+  // One worker per configured model starts immediately. Any extra batch is picked up by
+  // whichever provider finishes first.
+  const workers = Array.from({ length: Math.min(MCQ_MODELS.length, queue.length) }, async (_, workerIndex) => {
     while (queue.length && !ctx.signal.aborted && !ctx.fatal) {
       const group = queue.shift();
-      if (group) await runGroup(ctx, group);
+      if (group) await runGroup(ctx, group, workerIndex, reserveDisplayBlock);
     }
   });
   await Promise.all(workers);

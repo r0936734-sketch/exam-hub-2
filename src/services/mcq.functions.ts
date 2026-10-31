@@ -165,15 +165,27 @@ export const pollMcqJobServerFn = createServerFn({ method: "POST" })
     if (result.found && result.questions.length) {
       const db = await connectToDatabase();
       const updates = Object.fromEntries(
-        result.questions.map((question) => {
+        result.questions.flatMap((question) => {
           const slot = result.slotIndexes[question.slot];
           return [
-            `questions.${slot}`,
-            {
-              ...question,
-              id: `${data.jobId}-${question.slot}`,
-              slot,
-            },
+            [
+              `questions.${slot}`,
+              {
+                ...question,
+                id: `${data.jobId}-${question.slot}`,
+                slot,
+              },
+            ],
+            [
+              `slotMeta.${slot}`,
+              {
+                slot,
+                topicId: question.topicId,
+                topicTitle: question.topicTitle,
+                subtopic: question.subtopic,
+                style: question.style,
+              },
+            ],
           ];
         }),
       );

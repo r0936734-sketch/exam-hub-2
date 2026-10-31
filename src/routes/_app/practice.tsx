@@ -37,7 +37,8 @@ export const Route = createFileRoute("/_app/practice")({ component: PracticePage
 type JobStatus = "idle" | "running" | "done" | "error" | "cancelled";
 type SlotMeta = { topicId: string; topicTitle: string; subtopic: string; style: string };
 
-const POLL_INTERVAL_MS = 1000;
+// Fast polling keeps the live list responsive without leaving a long request open.
+const POLL_INTERVAL_MS = 650;
 
 function friendlyError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
@@ -327,6 +328,20 @@ function PracticePage() {
                 options: question.options,
                 correctIndex: question.correctIndex,
                 explanation: question.explanation,
+              };
+            }
+            return next;
+          });
+          setMeta((current) => {
+            const next = [...current];
+            for (const question of result.questions) {
+              const index = slotMapRef.current[question.slot];
+              if (index === undefined) continue;
+              next[index] = {
+                topicId: question.topicId,
+                topicTitle: question.topicTitle,
+                subtopic: question.subtopic,
+                style: question.style,
               };
             }
             return next;
