@@ -12,9 +12,9 @@ import { EXAM_PROFILES, STYLE_RULES, type SlotPlan } from "@/lib/mcq-profiles";
  */
 
 const MCQ_MODELS = ["gemma-4-31b-it", "gemma-4-26b-a4b-it"] as const;
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 8;
 const CONCURRENCY = 2;
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 2;
 const START_TIMEOUT_MS = 60_000;
 const FIRST_CHUNK_TIMEOUT_MS = 90_000;
 const CHUNK_TIMEOUT_MS = 45_000;
@@ -338,7 +338,7 @@ NON-NEGOTIABLE RULES:
 2. Never use "all of the above", "none of the above" or trick wording.
 3. Keep option lengths comparable; the correct option must not be conspicuously longer or more detailed.
 4. Do not put the answer position in a pattern; just write the correct option naturally.
-5. The explanation must say why the correct option is right and name the most tempting wrong option and why it fails. Two to four sentences.
+5. In one or two concise sentences, explain why the correct option is right and why the most tempting wrong option fails.
 6. Self-contained: include every number, table or code snippet needed inside the question.
 7. Use plain text and Unicode symbols (×, ÷, ≤, ≥, ≈, ∑, →). Do NOT use LaTeX or $ delimiters.
 8. Inside JSON strings, write line breaks as \\n and escape quotes properly.

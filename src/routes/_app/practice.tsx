@@ -25,8 +25,11 @@ import { getCorrectOptionDistribution, type McqQuestion } from "@/lib/mcq-engine
 import { STYLE_LABELS, type McqStyleId } from "@/lib/mcq-profiles";
 import {
   cancelMcqJobServerFn,
+  getActiveMcqAttemptServerFn,
   pollMcqJobServerFn,
+  saveMcqAnswerServerFn,
   startMcqJobServerFn,
+  submitMcqAttemptServerFn,
 } from "@/services/mcq.functions";
 
 export const Route = createFileRoute("/_app/practice")({ component: PracticePage });
@@ -94,10 +97,14 @@ function PracticePage() {
   const [notices, setNotices] = useState<string[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const [attemptId, setAttemptId] = useState<string | null>(null);
 
   const tokenRef = useRef(token || "");
   tokenRef.current = token || "";
+  const attemptIdRef = useRef<string | null>(null);
   const statusRef = useRef<JobStatus>("idle");
   statusRef.current = jobStatus;
   const activeJobRef = useRef<string | null>(null);
@@ -125,6 +132,59 @@ function PracticePage() {
     );
   };
 
+  useEffect(() => {
+    if (!token || mode.format !== "objective") return;
+    let cancelled = false;
+    setIsLoadingDraft(true);
+
+    void getActiveMcqAttemptServerFn({ data: { token, examModeId: mode.id } })
+      .then(({ attempt }) => {
+        if (cancelled || !attempt) return;
+        const restoredItems = attempt.questions.map((question) =>
+          question
+            ? {
+                id: question.id,
+                topicId: question.topicId,
+                topicTitle: question.topicTitle,
+                subtopic: question.subtopic,
+                style: question.style,
+                prompt: question.prompt,
+                options: question.options,
+                correctIndex: question.correctIndex,
+                explanation: question.explanation,
+              }
+            : null,
+        );
+        attemptIdRef.current = attempt.attemptId;
+        setAttemptId(attempt.attemptId);
+        setSelectedTopics(attempt.topicIds);
+        setCount(attempt.questionCount);
+        setInstructions(attempt.instructions);
+        setItems(restoredItems);
+        setMeta(
+          attempt.plan.map((entry) => ({
+            topicId: entry?.topicId || "",
+            topicTitle: entry?.topicTitle || "",
+            subtopic: entry?.subtopic || "",
+            style: entry?.style || "",
+          })),
+        );
+        setAnswers(attempt.answers);
+        setJobStatus("done");
+        setStatusMessage("Your saved practice set has been restored.");
+      })
+      .catch((error) => {
+        if (!cancelled) setGenerationError(friendlyError(error));
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDraft(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, mode.format, mode.id]);
+
   const cancelRunningJob = () => {
     if (activeJobRef.current && statusRef.current === "running") {
       void cancelMcqJobServerFn({
@@ -140,6 +200,8 @@ function PracticePage() {
     setItems([]);
     setMeta([]);
     setAnswers({});
+    attemptIdRef.current = null;
+    setAttemptId(null);
     setShowResults(false);
     setJobStatus("idle");
     setStatusMessage("");
@@ -159,6 +221,8 @@ function PracticePage() {
           topicIds: selectedTopics,
           count: jobCount,
           instructions: instructions.trim() || undefined,
+          attemptId: targetIndexes ? attemptIdRef.current || undefined : undefined,
+          slotIndexes: targetIndexes,
         },
       });
 
@@ -187,6 +251,8 @@ function PracticePage() {
       }
 
       activeJobRef.current = started.jobId;
+      attemptIdRef.current = started.attemptId;
+      setAttemptId(started.attemptId);
       setNotices([]);
       setStatusMessage("Starting the AI…");
       setElapsed(0);
@@ -202,6 +268,22 @@ function PracticePage() {
   const generateMissing = () => {
     const targets = items.flatMap((item, index) => (item ? [] : [index]));
     if (targets.length) void launch(targets.length, targets);
+  };
+
+  const finishAttempt = async () => {
+    if (!attemptId || isSubmitting) return;
+    setIsSubmitting(true);
+    setGenerationError("");
+    try {
+      await submitMcqAttemptServerFn({
+        data: { token: tokenRef.current, attemptId, answers },
+      });
+      setShowResults(true);
+    } catch (error) {
+      setGenerationError(friendlyError(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   /* Poll the running job and merge finished questions into the page as they arrive. */
@@ -337,7 +419,7 @@ function PracticePage() {
       <div>
         <PageHeader
           title={`${mode.shortTitle} practice`}
-          description={`${items.length} questions across ${selected.length} selected topic${selected.length === 1 ? "" : "s"}, written live by AI.`}
+          description={`${items.length} questions across ${selected.length} selected topic${selected.length === 1 ? "" : "s"}, written live by AI. Your questions and answers are saved until final submission.`}
         />
 
         <Card className="sticky top-2 z-20 mb-5 border-primary/20 bg-background/95 shadow-sm backdrop-blur">
@@ -369,8 +451,8 @@ function PracticePage() {
                     <Square className="size-3.5" /> Stop
                   </Button>
                 ) : (
-                  <Button size="sm" onClick={() => setShowResults(true)} disabled={!canFinish || showResults}>
-                    Finish and review
+                  <Button size="sm" onClick={() => void finishAttempt()} disabled={!canFinish || showResults || isSubmitting}>
+                    {isSubmitting ? "Submitting…" : "Finish and review"}
                   </Button>
                 )}
               </div>
@@ -507,7 +589,19 @@ function PracticePage() {
                             key={optionIndex}
                             type="button"
                             disabled={showResults}
-                            onClick={() => setAnswers((current) => ({ ...current, [question.id]: optionIndex }))}
+                            onClick={() => {
+                              setAnswers((current) => ({ ...current, [question.id]: optionIndex }));
+                              if (attemptId) {
+                                void saveMcqAnswerServerFn({
+                                  data: {
+                                    token: tokenRef.current,
+                                    attemptId,
+                                    questionId: question.id,
+                                    answerIndex: optionIndex,
+                                  },
+                                }).catch((error) => setGenerationError(friendlyError(error)));
+                              }
+                            }}
                             className={`flex min-h-12 items-start gap-3 rounded-lg border p-3 text-left text-sm transition disabled:cursor-default ${resultClass}`}
                           >
                             <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border text-xs font-semibold">
@@ -643,11 +737,11 @@ function PracticePage() {
               </label>
               <Button
                 className="w-full gap-2"
-                disabled={!selected.length || isStarting}
+                disabled={!selected.length || isStarting || isLoadingDraft}
                 onClick={() => void launch(count)}
               >
-                {isStarting ? <LoaderCircle className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-                {isStarting ? "Starting…" : "Generate MCQs with AI"}
+                {isStarting || isLoadingDraft ? <LoaderCircle className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                {isLoadingDraft ? "Loading saved set…" : isStarting ? "Starting…" : "Generate MCQs with AI"}
               </Button>
               {!selected.length && (
                 <p className="flex gap-2 text-xs text-amber-700 dark:text-amber-300">

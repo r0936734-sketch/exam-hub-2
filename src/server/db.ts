@@ -60,6 +60,9 @@ export async function connectToDatabase(): Promise<Db> {
     await cachedDb.collection("users").createIndex({ userId: 1 }, { unique: true });
     await cachedDb.collection("submissions").createIndex({ studentId: 1 });
     await cachedDb.collection("submissions").createIndex({ testId: 1 });
+    await cachedDb
+      .collection("mcq_practice_attempts")
+      .createIndex({ userId: 1, examModeId: 1, status: 1, updatedAt: -1 });
     await cachedDb.collection("tests").createIndex({ status: 1, createdAt: -1 });
     await cachedDb.collection("notices").createIndex({ createdAt: -1 });
   } catch (error) {

@@ -25,7 +25,9 @@ export type JobQuestion = {
 
 type Job = {
   id: string;
+  attemptId: string;
   userId: string;
+  slotIndexes: number[];
   total: number;
   status: JobStatus;
   message: string;
@@ -134,6 +136,8 @@ async function runJob(job: Job, examModeId: ExamModeId, plan: SlotPlan[], instru
 
 export function startMcqJob(input: {
   userId: string;
+  attemptId: string;
+  slotIndexes: number[];
   examModeId: ExamModeId;
   topicIds: string[];
   count: number;
@@ -158,7 +162,9 @@ export function startMcqJob(input: {
   const now = Date.now();
   const job: Job = {
     id: randomUUID(),
+    attemptId: input.attemptId,
     userId: input.userId,
+    slotIndexes: input.slotIndexes,
     total: plan.length,
     status: "running",
     message: "Planning your question set…",
@@ -175,8 +181,10 @@ export function startMcqJob(input: {
 
   return {
     jobId: job.id,
+    attemptId: job.attemptId,
     total: plan.length,
     examTitle: EXAM_MODES[input.examModeId].title,
+    slotIndexes: job.slotIndexes,
     plan: plan.map(({ slot, topicId, topicTitle, subtopic, style }) => ({ slot, topicId, topicTitle, subtopic, style })),
   };
 }
@@ -187,6 +195,8 @@ export function pollMcqJob(userId: string, jobId: string, cursor: number) {
   if (!job || job.userId !== userId) {
     return {
       found: false,
+      attemptId: "",
+      slotIndexes: [] as number[],
       status: "error" as JobStatus,
       message: "",
       notices: [] as string[],
@@ -202,6 +212,8 @@ export function pollMcqJob(userId: string, jobId: string, cursor: number) {
   const safeCursor = Math.max(0, Math.min(Math.floor(Number(cursor)) || 0, job.questions.length));
   return {
     found: true,
+    attemptId: job.attemptId,
+    slotIndexes: job.slotIndexes,
     status: job.status,
     message: job.message,
     notices: job.notices.slice(-3),
